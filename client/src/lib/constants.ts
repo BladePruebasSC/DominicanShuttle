@@ -40,5 +40,6 @@ export const COMPANY_INFO = {
   phone: "+1 (849) 654-2047",
   email: "info@dominicantransportpro.com",
   whatsapp: "18496542047",
+  notificationPhone: "+1 (809) 444-8800",
   coverage: ["Punta Cana", "Santo Domingo", "Puerto Plata", "La Romana"],
 };

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBookingSchema, insertContactMessageSchema } from "@shared/schema";
+import { notificationService } from "./notifications";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -40,6 +41,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertBookingSchema.parse(req.body);
       const booking = await storage.createBooking(validatedData);
+      
+      // Enviar notificación WhatsApp
+      try {
+        await notificationService.sendBookingNotification(booking);
+      } catch (notificationError) {
+        console.error('Error enviando notificación de reserva:', notificationError);
+        // No fallar la reserva si la notificación falla
+      }
+      
       res.status(201).json(booking);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -99,6 +109,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertContactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(validatedData);
+      
+      // Enviar notificación WhatsApp
+      try {
+        await notificationService.sendContactNotification(message);
+      } catch (notificationError) {
+        console.error('Error enviando notificación de contacto:', notificationError);
+        // No fallar el mensaje si la notificación falla
+      }
+      
       res.status(201).json(message);
     } catch (error) {
       if (error instanceof z.ZodError) {
