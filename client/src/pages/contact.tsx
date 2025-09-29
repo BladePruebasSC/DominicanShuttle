@@ -36,17 +36,17 @@ export default function Contact() {
   const emergencyContacts = [
     {
       title: "Emergencias 24/7",
-      number: "+1 (849) 654-2047",
+      number: "+1 (809) 444-8800",
       description: "Para emergencias durante tu viaje",
     },
     {
       title: "WhatsApp Inmediato",
-      number: "+1 (849) 654-2047", 
+      number: "+1 (809) 444-8800", 
       description: "Respuesta en menos de 5 minutos",
     },
     {
       title: "Coordinador de Viajes",
-      number: "+1 (849) 654-2048",
+      number: "+1 (809) 444-8800",
       description: "Para cambios de última hora",
     },
   ];
