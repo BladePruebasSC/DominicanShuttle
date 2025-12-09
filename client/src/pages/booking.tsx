@@ -89,18 +89,23 @@ export default function Booking() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted pt-24 pb-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-foreground mb-4">Reserva Tu Transporte</h1>
-          <p className="text-xl text-muted-foreground">
+    <div className="min-h-screen bg-void pt-24 pb-16 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12 animate-fade-in-up">
+          <span className="text-coco-gold text-[10px] font-bold uppercase tracking-[0.4em] block mb-4">
+            RESERVA
+          </span>
+          <h1 className="text-4xl md:text-5xl font-serif text-white mb-4">
+            Reserva Tu Transporte
+          </h1>
+          <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">
             Completa el formulario para reservar tu transporte premium
           </p>
         </div>
 
         {/* Progress Steps */}
-        <div className="flex justify-center mb-12">
-          <div className="flex items-center space-x-4">
+        <div className="flex justify-center mb-12 overflow-x-auto pb-4">
+          <div className="flex items-center space-x-2 md:space-x-4 min-w-max">
             {steps.slice(0, 3).map((step, index) => {
               const IconComponent = step.icon;
               const isActive = currentStep === step.number;
@@ -108,20 +113,24 @@ export default function Booking() {
               
               return (
                 <div key={step.number} className="flex items-center">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ${
-                    isActive ? "border-primary bg-primary text-white" :
-                    isCompleted ? "border-green-500 bg-green-500 text-white" :
-                    "border-muted-foreground bg-background text-muted-foreground"
-                  }`}>
-                    <IconComponent className="w-6 h-6" />
-                  </div>
-                  <div className="ml-3 hidden sm:block">
-                    <p className={`text-sm font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className={`flex flex-col items-center ${index < steps.length - 2 ? "mr-2 md:mr-4" : ""}`}>
+                    <div className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 transition-all ${
+                      isActive ? "border-coco-gold bg-coco-gold text-black" :
+                      isCompleted ? "border-coco-gold bg-coco-gold/20 text-coco-gold" :
+                      "border-white/20 bg-void/50 text-gray-500"
+                    }`}>
+                      <IconComponent className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <p className={`text-xs md:text-sm font-medium mt-2 hidden sm:block whitespace-nowrap ${
+                      isActive ? "text-coco-gold" : "text-gray-400"
+                    }`}>
                       {step.title}
                     </p>
                   </div>
                   {index < steps.length - 2 && (
-                    <div className={`w-8 h-0.5 ml-4 ${isCompleted ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+                    <div className={`w-4 md:w-8 h-0.5 transition-colors ${
+                      isCompleted ? "bg-coco-gold" : "bg-white/20"
+                    }`} />
                   )}
                 </div>
               );
@@ -129,26 +138,26 @@ export default function Booking() {
           </div>
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-2xl">
+        <Card className="shadow-xl glass-panel border-white/10">
+          <CardHeader className="border-b border-white/10">
+            <CardTitle className="text-2xl text-white font-serif">
               {currentStep === 1 && "Detalles del Viaje"}
               {currentStep === 2 && "Información Personal"}
               {currentStep === 3 && "Confirmar Reserva"}
               {currentStep === 4 && "¡Reserva Confirmada!"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-transparent">
             {currentStep === 4 ? (
               <div className="text-center py-12">
-                <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-foreground mb-4">¡Gracias por tu reserva!</h3>
-                <p className="text-muted-foreground mb-6">
+                <CheckCircle className="w-24 h-24 text-coco-gold mx-auto mb-6" />
+                <h3 className="text-2xl font-serif text-white mb-4">¡Gracias por tu reserva!</h3>
+                <p className="text-gray-400 mb-6">
                   Hemos recibido tu solicitud de reserva. Te contactaremos pronto para confirmar todos los detalles.
                 </p>
-                <div className="bg-muted rounded-lg p-6 text-left max-w-md mx-auto">
-                  <h4 className="font-semibold mb-2">Próximos pasos:</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
+                <div className="bg-void/50 border border-white/10 rounded-lg p-6 text-left max-w-md mx-auto">
+                  <h4 className="font-semibold mb-2 text-white">Próximos pasos:</h4>
+                  <ul className="space-y-2 text-sm text-gray-300">
                     <li>• Recibirás un WhatsApp con los detalles del conductor</li>
                     <li>• Confirmaremos la hora exacta de recogida</li>
                     <li>• Te enviaremos el número de contacto del conductor</li>
@@ -166,20 +175,32 @@ export default function Booking() {
                           name="origin"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Origen</FormLabel>
+                              <FormLabel className="text-gray-300">Origen</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger data-testid="select-origin">
+                                  <SelectTrigger 
+                                    className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
+                                    data-testid="select-origin"
+                                  >
                                     <SelectValue placeholder="Selecciona origen" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-void border-white/10">
                                   {LOCATIONS.AIRPORTS.map((airport) => (
-                                    <SelectItem key={airport.value} value={airport.value}>
+                                    <SelectItem 
+                                      key={airport.value} 
+                                      value={airport.value}
+                                      className="text-white hover:bg-coco-gold/20"
+                                    >
                                       {airport.label}
                                     </SelectItem>
                                   ))}
-                                  <SelectItem value="hotel">Hotel/Resort</SelectItem>
+                                  <SelectItem 
+                                    value="hotel"
+                                    className="text-white hover:bg-coco-gold/20"
+                                  >
+                                    Hotel/Resort
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -192,16 +213,23 @@ export default function Booking() {
                           name="destination"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Destino</FormLabel>
+                              <FormLabel className="text-gray-300">Destino</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger data-testid="select-destination">
+                                  <SelectTrigger 
+                                    className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
+                                    data-testid="select-destination"
+                                  >
                                     <SelectValue placeholder="Selecciona destino" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-void border-white/10">
                                   {LOCATIONS.DESTINATIONS.map((destination) => (
-                                    <SelectItem key={destination.value} value={destination.value}>
+                                    <SelectItem 
+                                      key={destination.value} 
+                                      value={destination.value}
+                                      className="text-white hover:bg-coco-gold/20"
+                                    >
                                       {destination.label}
                                     </SelectItem>
                                   ))}
@@ -219,12 +247,13 @@ export default function Booking() {
                           name="pickupDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fecha de Recogida</FormLabel>
+                              <FormLabel className="text-gray-300">Fecha de Recogida</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="datetime-local" 
                                   {...field}
                                   min={new Date().toISOString().slice(0, 16)}
+                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
                                   data-testid="input-pickup-date"
                                 />
                               </FormControl>
@@ -238,7 +267,7 @@ export default function Booking() {
                           name="passengers"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Número de Pasajeros</FormLabel>
+                              <FormLabel className="text-gray-300">Número de Pasajeros</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -252,6 +281,7 @@ export default function Booking() {
                                     setSelectedVehicle(recommendedVehicle);
                                     form.setValue("vehicleType", recommendedVehicle);
                                   }}
+                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
                                   data-testid="input-passengers"
                                 />
                               </FormControl>
@@ -266,18 +296,18 @@ export default function Booking() {
                         name="serviceType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tipo de Servicio</FormLabel>
+                            <FormLabel className="text-gray-300">Tipo de Servicio</FormLabel>
                             <FormControl>
                               <RadioGroup
                                 onValueChange={field.onChange}
                                 defaultValue={field.value}
-                                className="grid grid-cols-2 gap-4"
+                                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
                                 data-testid="radio-service-type"
                               >
                                 {SERVICE_TYPES.map((service) => (
-                                  <div key={service.value} className="flex items-center space-x-2">
-                                    <RadioGroupItem value={service.value} id={service.value} />
-                                    <label htmlFor={service.value} className="text-sm font-medium">
+                                  <div key={service.value} className="flex items-center space-x-2 border border-white/10 rounded-lg p-3 hover:border-coco-gold/30 transition-colors">
+                                    <RadioGroupItem value={service.value} id={service.value} className="border-coco-gold text-coco-gold" />
+                                    <label htmlFor={service.value} className="text-sm font-medium text-gray-300 cursor-pointer">
                                       {service.label}
                                     </label>
                                   </div>
@@ -295,13 +325,14 @@ export default function Booking() {
                           name="returnDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fecha de Regreso</FormLabel>
+                              <FormLabel className="text-gray-300">Fecha de Regreso</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="datetime-local" 
                                   {...field}
                                   value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
                                   onChange={(e) => field.onChange(e.target.value)}
+                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
                                   data-testid="input-return-date"
                                 />
                               </FormControl>
@@ -316,15 +347,15 @@ export default function Booking() {
                         name="vehicleType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tipo de Vehículo</FormLabel>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormLabel className="text-gray-300">Tipo de Vehículo</FormLabel>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {VEHICLE_TYPES.map((vehicle) => (
                                 <div
                                   key={vehicle.value}
-                                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
                                     field.value === vehicle.value 
-                                      ? "border-primary bg-primary/10" 
-                                      : "border-border hover:border-primary/50"
+                                      ? "border-coco-gold bg-coco-gold/10" 
+                                      : "border-white/10 hover:border-coco-gold/30 bg-void/30"
                                   }`}
                                   onClick={() => {
                                     field.onChange(vehicle.value);
@@ -334,8 +365,8 @@ export default function Booking() {
                                 >
                                   <div className="flex justify-between items-center">
                                     <div>
-                                      <h4 className="font-medium">{vehicle.label}</h4>
-                                      <p className="text-sm text-muted-foreground">
+                                      <h4 className="font-medium text-white">{vehicle.label}</h4>
+                                      <p className="text-sm text-gray-400">
                                         Desde ${vehicle.price} USD
                                       </p>
                                     </div>
@@ -343,7 +374,7 @@ export default function Booking() {
                                       type="radio"
                                       checked={field.value === vehicle.value}
                                       onChange={() => {}}
-                                      className="text-primary"
+                                      className="text-coco-gold accent-coco-gold"
                                     />
                                   </div>
                                 </div>
@@ -355,10 +386,10 @@ export default function Booking() {
                       />
 
                       {selectedVehicle && form.watch("passengers") && form.watch("serviceType") && (
-                        <div className="bg-muted rounded-lg p-6">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-medium">Precio estimado:</span>
-                            <Badge variant="secondary" className="text-xl font-bold">
+                        <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-6">
+                          <div className="flex justify-between items-center flex-wrap gap-2">
+                            <span className="text-lg font-medium text-white">Precio estimado:</span>
+                            <Badge className="bg-coco-gold/20 text-coco-gold border border-coco-gold/30 text-xl font-bold px-4 py-2">
                               ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), selectedVehicle)} USD
                             </Badge>
                           </div>
@@ -375,9 +406,14 @@ export default function Booking() {
                           name="customerName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nombre Completo</FormLabel>
+                              <FormLabel className="text-gray-300">Nombre Completo</FormLabel>
                               <FormControl>
-                                <Input placeholder="Tu nombre completo" {...field} data-testid="input-customer-name" />
+                                <Input 
+                                  placeholder="Tu nombre completo" 
+                                  {...field} 
+                                  className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
+                                  data-testid="input-customer-name" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -389,9 +425,15 @@ export default function Booking() {
                           name="customerEmail"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email</FormLabel>
+                              <FormLabel className="text-gray-300">Email</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="tu@email.com" {...field} data-testid="input-customer-email" />
+                                <Input 
+                                  type="email" 
+                                  placeholder="tu@email.com" 
+                                  {...field} 
+                                  className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
+                                  data-testid="input-customer-email" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -404,12 +446,13 @@ export default function Booking() {
                         name="customerPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Teléfono (WhatsApp)</FormLabel>
+                            <FormLabel className="text-gray-300">Teléfono (WhatsApp)</FormLabel>
                             <FormControl>
                               <Input 
                                 type="tel" 
                                 placeholder="+1 (xxx) xxx-xxxx" 
                                 {...field} 
+                                className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                                 data-testid="input-customer-phone"
                               />
                             </FormControl>
@@ -423,12 +466,13 @@ export default function Booking() {
                         name="specialRequests"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Solicitudes Especiales (Opcional)</FormLabel>
+                            <FormLabel className="text-gray-300">Solicitudes Especiales (Opcional)</FormLabel>
                             <FormControl>
                               <Textarea 
                                 rows={3} 
                                 placeholder="Silla para bebé, equipaje extra, etc." 
                                 {...field} 
+                                className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                                 data-testid="textarea-special-requests"
                               />
                             </FormControl>
@@ -441,23 +485,23 @@ export default function Booking() {
 
                   {currentStep === 3 && (
                     <div className="space-y-6">
-                      <div className="bg-muted rounded-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Resumen de tu Reserva</h3>
+                      <div className="bg-void/50 border border-white/10 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold mb-4 text-white">Resumen de tu Reserva</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p><strong>Origen:</strong> {form.watch("origin")}</p>
-                            <p><strong>Destino:</strong> {form.watch("destination")}</p>
-                            <p><strong>Fecha:</strong> {form.watch("pickupDate") && new Date(form.watch("pickupDate")).toLocaleString()}</p>
+                          <div className="space-y-2">
+                            <p className="text-gray-300"><strong className="text-white">Origen:</strong> {form.watch("origin")}</p>
+                            <p className="text-gray-300"><strong className="text-white">Destino:</strong> {form.watch("destination")}</p>
+                            <p className="text-gray-300"><strong className="text-white">Fecha:</strong> {form.watch("pickupDate") && new Date(form.watch("pickupDate")).toLocaleString()}</p>
                             {form.watch("returnDate") && (
-                              <p><strong>Regreso:</strong> {new Date(form.watch("returnDate")).toLocaleString()}</p>
+                              <p className="text-gray-300"><strong className="text-white">Regreso:</strong> {new Date(form.watch("returnDate")).toLocaleString()}</p>
                             )}
                           </div>
-                          <div>
-                            <p><strong>Pasajeros:</strong> {form.watch("passengers")}</p>
-                            <p><strong>Vehículo:</strong> {VEHICLE_TYPES.find(v => v.value === form.watch("vehicleType"))?.label}</p>
-                            <p><strong>Servicio:</strong> {SERVICE_TYPES.find(s => s.value === form.watch("serviceType"))?.label}</p>
-                            <p><strong>Precio Total:</strong> 
-                              <Badge variant="secondary" className="ml-2">
+                          <div className="space-y-2">
+                            <p className="text-gray-300"><strong className="text-white">Pasajeros:</strong> {form.watch("passengers")}</p>
+                            <p className="text-gray-300"><strong className="text-white">Vehículo:</strong> {VEHICLE_TYPES.find(v => v.value === form.watch("vehicleType"))?.label}</p>
+                            <p className="text-gray-300"><strong className="text-white">Servicio:</strong> {SERVICE_TYPES.find(s => s.value === form.watch("serviceType"))?.label}</p>
+                            <p className="text-gray-300"><strong className="text-white">Precio Total:</strong> 
+                              <Badge className="ml-2 bg-coco-gold/20 text-coco-gold border border-coco-gold/30">
                                 ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), form.watch("vehicleType"))} USD
                               </Badge>
                             </p>
@@ -465,9 +509,9 @@ export default function Booking() {
                         </div>
                       </div>
 
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-blue-900 mb-2">Información Importante:</h4>
-                        <ul className="text-sm text-blue-800 space-y-1">
+                      <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-4">
+                        <h4 className="font-semibold text-coco-gold mb-2">Información Importante:</h4>
+                        <ul className="text-sm text-gray-300 space-y-1">
                           <li>• El conductor te contactará 30 minutos antes de la recogida</li>
                           <li>• El pago se realiza directamente al conductor</li>
                           <li>• Incluye agua gratis y Wi-Fi en vehículos premium</li>
@@ -477,12 +521,13 @@ export default function Booking() {
                     </div>
                   )}
 
-                  <div className="flex justify-between pt-6">
+                  <div className="flex justify-between pt-6 flex-wrap gap-4">
                     {currentStep > 1 && currentStep < 4 && (
                       <Button 
                         type="button" 
                         variant="outline" 
                         onClick={() => setCurrentStep(currentStep - 1)}
+                        className="border-white/20 text-white hover:bg-white/10 hover:text-white"
                         data-testid="button-previous"
                       >
                         Anterior
@@ -493,7 +538,7 @@ export default function Booking() {
                       <Button 
                         type="button" 
                         onClick={() => setCurrentStep(currentStep + 1)}
-                        className="ml-auto"
+                        className="ml-auto bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]"
                         data-testid="button-next"
                       >
                         Siguiente
@@ -501,7 +546,7 @@ export default function Booking() {
                     ) : currentStep === 3 ? (
                       <Button 
                         type="submit" 
-                        className="ml-auto"
+                        className="ml-auto bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]"
                         disabled={bookingMutation.isPending}
                         data-testid="button-confirm-booking"
                       >

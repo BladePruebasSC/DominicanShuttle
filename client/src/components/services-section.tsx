@@ -69,9 +69,9 @@ export default function ServicesSection() {
             return (
               <Card
                 key={index}
-                className="hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30"
+                className="hover:shadow-xl transition-all duration-300 border-white/10 !bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30"
               >
-                <CardHeader className="text-center">
+                <CardHeader className="text-center bg-transparent border-b border-white/10">
                   <div className="border border-coco-gold/30 bg-void/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:border-coco-gold transition-colors">
                     <IconComponent className="w-8 h-8 text-coco-gold" />
                   </div>
@@ -79,7 +79,7 @@ export default function ServicesSection() {
                     {service.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="bg-transparent">
                   <p className="text-gray-400 mb-4 text-sm leading-relaxed">
                     {service.description}
                   </p>

@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Star, MapPin, Camera, Utensils } from "lucide-react";
+import { Clock, Users, Star, MapPin, Camera, Utensils, Check } from "lucide-react";
 
 const tourCategories = [
   { value: "all", label: "Todos los Tours" },
@@ -177,27 +178,41 @@ const tours = [
 ];
 
 export default function Tours() {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const filteredTours = selectedCategory === "all" 
+    ? tours 
+    : tours.filter(tour => tour.category === selectedCategory);
+
   return (
-    <div className="min-h-screen bg-background pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-void pt-24 pb-16 px-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+        <div className="text-center mb-12 md:mb-16 animate-fade-in-up">
+          <span className="text-coco-gold text-[10px] font-bold uppercase tracking-[0.4em] block mb-4">
+            TOURS
+          </span>
+          <h1 className="text-4xl md:text-5xl font-serif text-white mb-4">
             Tours y Excursiones
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-gray-400 text-sm md:text-base max-w-3xl mx-auto">
             Descubre los destinos más espectaculares de República Dominicana con nuestros tours especializados. 
             Aventura, cultura y naturaleza te esperan.
           </p>
         </div>
 
         {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
+        <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-12">
           {tourCategories.map((category) => (
             <Button 
               key={category.value}
               variant="outline"
-              className="hover:bg-primary hover:text-primary-foreground"
+              onClick={() => setSelectedCategory(category.value)}
+              className={`border transition-all text-xs md:text-sm ${
+                selectedCategory === category.value
+                  ? "border-coco-gold bg-coco-gold/20 text-coco-gold"
+                  : "border-white/20 text-gray-400 hover:border-coco-gold/50 hover:text-coco-gold"
+              }`}
               data-testid={`filter-${category.value}`}
             >
               {category.label}
@@ -206,77 +221,89 @@ export default function Tours() {
         </div>
 
         {/* Tours Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {tours.map((tour) => (
-            <Card key={tour.id} className="overflow-hidden hover:shadow-xl transition-shadow" data-testid={`card-tour-${tour.id}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
+          {filteredTours.map((tour) => (
+            <Card 
+              key={tour.id} 
+              className="overflow-hidden hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 group" 
+              data-testid={`card-tour-${tour.id}`}
+            >
               <div className="aspect-video overflow-hidden relative">
                 <img 
                   src={tour.image} 
                   alt={tour.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition duration-700"
                 />
                 {tour.popular && (
-                  <Badge className="absolute top-4 left-4 bg-accent text-accent-foreground">
+                  <Badge className="absolute top-4 left-4 bg-coco-gold/20 text-coco-gold border border-coco-gold/30 backdrop-blur-sm">
                     Más Popular
                   </Badge>
                 )}
-                <div className="absolute top-4 right-4 bg-black/70 text-white px-2 py-1 rounded text-sm">
+                <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-2 py-1 rounded text-xs md:text-sm">
                   <div className="flex items-center">
-                    <Star className="w-3 h-3 mr-1 fill-current text-yellow-400" />
+                    <i className="fas fa-star text-coco-gold mr-1"></i>
                     {tour.rating} ({tour.reviews})
                   </div>
                 </div>
+                <div className="absolute inset-0 border border-coco-gold/20 m-4 pointer-events-none"></div>
               </div>
               
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl">{tour.name}</CardTitle>
-                  <Badge variant="secondary" className="text-lg font-bold">
+                <div className="flex justify-between items-start flex-wrap gap-2">
+                  <CardTitle className="text-xl text-white font-serif">{tour.name}</CardTitle>
+                  <Badge className="bg-coco-gold/20 text-coco-gold border border-coco-gold/30 text-lg font-bold px-3 py-1">
                     ${tour.price}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground text-sm">{tour.description}</p>
+                <p className="text-gray-400 text-sm mt-2">{tour.description}</p>
               </CardHeader>
               
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <CardContent className="space-y-4 bg-transparent">
+                <div className="flex items-center justify-between text-sm text-gray-400 flex-wrap gap-2">
                   <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
+                    <Clock className="w-4 h-4 mr-1 text-coco-gold" />
                     <span>{tour.duration}</span>
                   </div>
                   <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-1" />
+                    <Users className="w-4 h-4 mr-1 text-coco-gold" />
                     <span>Máx. {tour.maxPeople} personas</span>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">Incluye:</h4>
-                  <ul className="text-xs text-muted-foreground space-y-1">
+                  <h4 className="font-semibold text-sm mb-2 text-white">Incluye:</h4>
+                  <ul className="text-xs text-gray-300 space-y-1">
                     {tour.includes.slice(0, 3).map((item, index) => (
                       <li key={index} className="flex items-center">
-                        <div className="w-1 h-1 bg-primary rounded-full mr-2" />
-                        {item}
+                        <Check className="w-3 h-3 mr-2 text-coco-gold flex-shrink-0" />
+                        <span>{item}</span>
                       </li>
                     ))}
                     {tour.includes.length > 3 && (
-                      <li className="text-primary text-xs">+{tour.includes.length - 3} más incluidos</li>
+                      <li className="text-coco-gold text-xs">+{tour.includes.length - 3} más incluidos</li>
                     )}
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">Destacados:</h4>
+                  <h4 className="font-semibold text-sm mb-2 text-white">Destacados:</h4>
                   <div className="flex flex-wrap gap-1">
                     {tour.highlights.map((highlight, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
+                      <Badge 
+                        key={index} 
+                        variant="outline" 
+                        className="text-xs border-white/20 text-gray-300"
+                      >
                         {highlight}
                       </Badge>
                     ))}
                   </div>
                 </div>
 
-                <Button className="w-full" data-testid={`button-book-tour-${tour.id}`}>
+                <Button 
+                  className="w-full bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]" 
+                  data-testid={`button-book-tour-${tour.id}`}
+                >
                   <Camera className="w-4 h-4 mr-2" />
                   Reservar Tour
                 </Button>
@@ -286,41 +313,51 @@ export default function Tours() {
         </div>
 
         {/* Info Section */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="text-center p-6">
-            <MapPin className="w-12 h-12 text-primary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Recogida Incluida</h3>
-            <p className="text-sm text-muted-foreground">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
+          <Card className="text-center p-6 glass-panel border-white/10">
+            <div className="border border-coco-gold/30 bg-void/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MapPin className="w-6 h-6 text-coco-gold" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-white">Recogida Incluida</h3>
+            <p className="text-sm text-gray-400">
               Te recogemos en tu hotel o punto de encuentro sin costo adicional.
             </p>
           </Card>
 
-          <Card className="text-center p-6">
-            <Utensils className="w-12 h-12 text-secondary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Comidas Incluidas</h3>
-            <p className="text-sm text-muted-foreground">
+          <Card className="text-center p-6 glass-panel border-white/10">
+            <div className="border border-coco-gold/30 bg-void/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Utensils className="w-6 h-6 text-coco-gold" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-white">Comidas Incluidas</h3>
+            <p className="text-sm text-gray-400">
               Todos nuestros tours incluyen almuerzo y bebidas durante el recorrido.
             </p>
           </Card>
 
-          <Card className="text-center p-6">
-            <Users className="w-12 h-12 text-accent mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Guías Expertos</h3>
-            <p className="text-sm text-muted-foreground">
+          <Card className="text-center p-6 glass-panel border-white/10">
+            <div className="border border-coco-gold/30 bg-void/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-6 h-6 text-coco-gold" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-white">Guías Expertos</h3>
+            <p className="text-sm text-gray-400">
               Guías locales certificados que hablan español e inglés perfectamente.
             </p>
           </Card>
         </div>
 
         {/* CTA Section */}
-        <div className="mt-16 text-center bg-muted rounded-xl p-8">
-          <h2 className="text-2xl font-bold text-foreground mb-4">
+        <div className="text-center glass-panel border-white/10 rounded-xl p-8 md:p-12">
+          <h2 className="text-2xl md:text-3xl font-serif text-white mb-4">
             ¿No encuentras el tour perfecto?
           </h2>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
             Creamos tours personalizados según tus intereses y preferencias.
           </p>
-          <Button size="lg" className="bg-secondary hover:bg-secondary/90" data-testid="button-custom-tour">
+          <Button 
+            size="lg" 
+            className="bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]"
+            data-testid="button-custom-tour"
+          >
             Solicitar Tour Personalizado
           </Button>
         </div>

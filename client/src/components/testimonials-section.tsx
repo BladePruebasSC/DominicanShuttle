@@ -60,80 +60,62 @@ const testimonials = [
   },
 ];
 
-// Componente de reseña flotante (similar a TripAdvisor/Google)
-function FloatingReview({ review, index }: { review: typeof testimonials[0]; index: number }) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, index * 2000);
-
-    return () => clearTimeout(timer);
-  }, [index]);
-
-  if (!isVisible) return null;
-
-  return (
-    <div
-      className={`review-card-floating fixed bottom-20 left-4 md:left-6 z-40 max-w-[320px] animate-review-slide ${
-        isVisible ? "opacity-100" : "opacity-0"
-      }`}
-      style={{ animationDelay: `${index * 8}s` }}
-    >
-      <div className="glass-panel rounded-sm p-4 border-l-4 border-coco-gold shadow-2xl">
-        <div className="flex items-start gap-3">
-          <div className="flex text-coco-gold text-sm gap-0.5 flex-shrink-0">
-            {[...Array(review.rating)].map((_, i) => (
-              <i key={i} className="fas fa-star text-xs"></i>
-            ))}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-serif italic leading-relaxed mb-2">
-              "{review.review}"
-            </p>
-            <div className="flex items-center justify-between">
-              <p className="text-gray-400 text-[9px] uppercase tracking-wider">
-                — {review.name}
-              </p>
-              <span className="text-gray-500 text-[8px] uppercase tracking-widest">
-                via {review.source}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function TestimonialsSection() {
-  const [displayedReviews, setDisplayedReviews] = useState<typeof testimonials>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (currentIndex < testimonials.length) {
-        setDisplayedReviews((prev) => [...prev, testimonials[currentIndex]]);
-        setCurrentIndex((prev) => prev + 1);
-      } else {
-        // Reiniciar ciclo
-        setDisplayedReviews([]);
-        setCurrentIndex(0);
-      }
+    // Mostrar reseña actual
+    setIsVisible(true);
+
+    // Ocultar después de 6 segundos
+    const hideTimer = setTimeout(() => {
+      setIsVisible(false);
     }, 6000);
 
-    return () => clearInterval(interval);
-  }, [currentIndex]);
+    // Cambiar a la siguiente reseña después de 8 segundos (2 segundos de transición)
+    const nextTimer = setTimeout(() => {
+      setCurrentReviewIndex((prev) => (prev + 1) % testimonials.length);
+    }, 8000);
+
+    return () => {
+      clearTimeout(hideTimer);
+      clearTimeout(nextTimer);
+    };
+  }, [currentReviewIndex]);
+
+  const currentReview = testimonials[currentReviewIndex];
 
   return (
     <>
-      {/* Reseñas flotantes */}
-      <div className="fixed bottom-0 left-0 z-40 pointer-events-none">
-        {displayedReviews.map((review, index) => (
-          <FloatingReview key={`${review.name}-${index}`} review={review} index={index} />
-        ))}
-      </div>
+      {/* Reseña flotante única */}
+      {isVisible && (
+        <div className="fixed bottom-20 left-4 md:left-6 z-40 max-w-[320px] pointer-events-auto">
+          <div className="glass-panel rounded-sm p-4 border-l-4 border-coco-gold shadow-2xl animate-fade-in-up">
+            <div className="flex items-start gap-3">
+              <div className="flex text-coco-gold text-sm gap-0.5 flex-shrink-0">
+                {[...Array(currentReview.rating)].map((_, i) => (
+                  <i key={i} className="fas fa-star text-xs"></i>
+                ))}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-serif italic leading-relaxed mb-2">
+                  "{currentReview.review}"
+                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-400 text-[9px] uppercase tracking-wider">
+                    — {currentReview.name}
+                  </p>
+                  <span className="text-gray-500 text-[8px] uppercase tracking-widest">
+                    via {currentReview.source}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sección principal de testimonios */}
       <section className="py-20 bg-void relative border-t border-white/5">

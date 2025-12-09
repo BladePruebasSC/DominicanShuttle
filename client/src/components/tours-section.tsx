@@ -54,7 +54,7 @@ export default function ToursSection() {
           {tours.map((tour, index) => (
             <Card
               key={index}
-              className="overflow-hidden hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 group"
+              className="overflow-hidden hover:shadow-xl transition-all duration-300 border-white/10 !bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 group"
               data-testid={`card-tour-${index}`}
             >
               <div className="aspect-video overflow-hidden relative">
@@ -68,7 +68,7 @@ export default function ToursSection() {
                 </Badge>
                 <div className="absolute inset-0 border border-coco-gold/20 m-4 pointer-events-none"></div>
               </div>
-              <CardHeader>
+              <CardHeader className="bg-transparent border-b border-white/10">
                 <CardTitle className="text-xl text-white font-serif">
                   {tour.name}
                 </CardTitle>
