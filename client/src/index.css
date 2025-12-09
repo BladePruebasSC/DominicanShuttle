@@ -3,6 +3,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Noise Overlay */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.04;
+  background: url('https://grainy-gradients.vercel.app/noise.svg');
+}
+
+/* Navbar sólido al scroll */
+.nav-scrolled {
+  background-color: rgba(5, 5, 5, 0.98) !important;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+/* Glass Panel */
+.glass-panel {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Text Gradient Gold */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FFF 0%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Review Card Floating */
+.review-card-floating {
+  pointer-events: auto;
+  animation: reviewSlide 8s forwards;
+}
+
+@keyframes reviewSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
 :root {
   --background: hsl(210, 40%, 96%);
   --foreground: hsl(210, 40%, 8%);
@@ -64,14 +127,33 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased;
+    background-color: #050505;
+    color: #E5E5E5;
+    overflow-x: hidden;
   }
 }
 
 .hero-bg {
-  background-image: linear-gradient(rgba(11, 79, 108, 0.7), rgba(32, 178, 170, 0.3)), url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080');
+  position: relative;
+  background-image: linear-gradient(to bottom, rgba(0,0,0,0.4), #050505), 
+                    url('https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=1920&auto=format&fit=crop');
   background-size: cover;
   background-position: center;
+  background-attachment: fixed;
+}
+
+.hero-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('https://grainy-gradients.vercel.app/noise.svg');
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .floating-whatsapp {

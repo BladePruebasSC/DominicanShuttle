@@ -11,7 +11,6 @@ const services = [
       { name: "Santo Domingo (SDQ)", price: "desde $45" },
       { name: "Puerto Plata (POP)", price: "desde $40" },
     ],
-    color: "bg-primary",
   },
   {
     icon: MapPin,
@@ -23,7 +22,6 @@ const services = [
       { name: "Zona Colonial Santo Domingo", price: "" },
       { name: "Cayo Levantado", price: "" },
     ],
-    color: "bg-secondary",
   },
   {
     icon: Briefcase,
@@ -35,7 +33,6 @@ const services = [
       { name: "Servicios por horas", price: "" },
       { name: "Disponibilidad 24/7", price: "" },
     ],
-    color: "bg-accent",
   },
   {
     icon: Users,
@@ -47,39 +44,59 @@ const services = [
       { name: "Eventos corporativos", price: "" },
       { name: "Bodas y celebraciones", price: "" },
     ],
-    color: "bg-caribbean-600",
   },
 ];
 
 export default function ServicesSection() {
   return (
-    <section className="py-20 bg-muted">
+    <section className="py-20 bg-void relative border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-foreground mb-4">Nuestros Servicios</h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <span className="text-coco-gold text-[10px] font-bold uppercase tracking-[0.4em] block mb-4">
+            SERVICIOS
+          </span>
+          <h2 className="text-4xl md:text-5xl font-serif text-white mb-4">
+            Nuestros Servicios
+          </h2>
+          <p className="text-gray-400 text-sm md:text-base max-w-3xl mx-auto">
             Ofrecemos una amplia gama de servicios de transporte para hacer de tu experiencia en República Dominicana algo inolvidable.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => {
             const IconComponent = service.icon;
             return (
-              <Card key={index} className="hover:shadow-xl transition-shadow">
+              <Card
+                key={index}
+                className="hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30"
+              >
                 <CardHeader className="text-center">
-                  <div className={`${service.color} text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                    <IconComponent className="w-8 h-8" />
+                  <div className="border border-coco-gold/30 bg-void/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:border-coco-gold transition-colors">
+                    <IconComponent className="w-8 h-8 text-coco-gold" />
                   </div>
-                  <CardTitle className="text-xl">{service.title}</CardTitle>
+                  <CardTitle className="text-xl text-white font-serif">
+                    {service.title}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground mb-4">{service.description}</p>
+                  <p className="text-gray-400 mb-4 text-sm leading-relaxed">
+                    {service.description}
+                  </p>
                   <div className="space-y-2 text-sm">
                     {service.routes.map((route, routeIndex) => (
-                      <div key={routeIndex} className="flex justify-between items-center">
-                        <span className="text-muted-foreground">• {route.name}</span>
-                        {route.price && <span className="font-medium">{route.price}</span>}
+                      <div
+                        key={routeIndex}
+                        className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0"
+                      >
+                        <span className="text-gray-300 text-xs">
+                          • {route.name}
+                        </span>
+                        {route.price && (
+                          <span className="font-semibold text-coco-gold text-xs">
+                            {route.price}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -9,6 +9,8 @@ import Booking from "@/pages/booking";
 import Tours from "@/pages/tours";
 import Fleet from "@/pages/fleet";
 import Contact from "@/pages/contact";
+import AdminDashboard from "@/pages/admin-dashboard";
+import SecretAdmin from "@/pages/secret-admin";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import WhatsAppFloat from "@/components/whatsapp-float";
@@ -21,6 +23,8 @@ function Router() {
       <Route path="/tours" component={Tours} />
       <Route path="/fleet" component={Fleet} />
       <Route path="/contact" component={Contact} />
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/cderf" component={SecretAdmin} />
       <Route component={NotFound} />
     </Switch>
   );

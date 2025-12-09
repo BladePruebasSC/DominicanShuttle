@@ -61,7 +61,6 @@ export default function ContactSection() {
       value: COMPANY_INFO.phone,
       detail: "Disponible 24/7",
       href: `tel:${COMPANY_INFO.phone}`,
-      color: "bg-primary",
     },
     {
       icon: Mail,
@@ -69,7 +68,6 @@ export default function ContactSection() {
       value: COMPANY_INFO.email,
       detail: "Respuesta en 2 horas",
       href: `mailto:${COMPANY_INFO.email}`,
-      color: "bg-secondary",
     },
     {
       icon: MessageSquare,
@@ -77,14 +75,12 @@ export default function ContactSection() {
       value: COMPANY_INFO.phone,
       detail: "Respuesta inmediata",
       href: `https://wa.me/${COMPANY_INFO.whatsapp}`,
-      color: "bg-accent",
     },
     {
       icon: MapPin,
       title: "Cobertura",
       value: "Toda República Dominicana",
       detail: COMPANY_INFO.coverage.join(", "),
-      color: "bg-caribbean-600",
     },
   ];
 
@@ -98,22 +94,29 @@ export default function ContactSection() {
   ];
 
   return (
-    <section className="py-20 bg-background">
+    <section className="py-20 bg-void relative border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-foreground mb-4">Contáctanos</h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <span className="text-coco-gold text-[10px] font-bold uppercase tracking-[0.4em] block mb-4">
+            CONTACTO
+          </span>
+          <h2 className="text-4xl md:text-5xl font-serif text-white mb-4">
+            Contáctanos
+          </h2>
+          <p className="text-gray-400 text-sm md:text-base max-w-3xl mx-auto">
             ¿Tienes preguntas? Nuestro equipo está aquí para ayudarte 24/7.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl">Envíanos un Mensaje</CardTitle>
+          <Card className="shadow-lg glass-panel border-white/10">
+            <CardHeader className="border-b border-white/10">
+              <CardTitle className="text-2xl text-white font-serif">
+                Envíanos un Mensaje
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-transparent">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -122,9 +125,14 @@ export default function ContactSection() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nombre</FormLabel>
+                          <FormLabel className="text-gray-300">Nombre</FormLabel>
                           <FormControl>
-                            <Input placeholder="Tu nombre" {...field} data-testid="input-name" />
+                            <Input
+                              placeholder="Tu nombre"
+                              {...field}
+                              className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
+                              data-testid="input-name"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -136,9 +144,15 @@ export default function ContactSection() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="text-gray-300">Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="tu@email.com" {...field} data-testid="input-email" />
+                            <Input
+                              type="email"
+                              placeholder="tu@email.com"
+                              {...field}
+                              className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
+                              data-testid="input-email"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -151,9 +165,15 @@ export default function ContactSection() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
+                        <FormLabel className="text-gray-300">Teléfono</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="+1 (xxx) xxx-xxxx" {...field} data-testid="input-phone" />
+                          <Input
+                            type="tel"
+                            placeholder="+1 (xxx) xxx-xxxx"
+                            {...field}
+                            className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
+                            data-testid="input-phone"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -165,16 +185,25 @@ export default function ContactSection() {
                     name="serviceInterest"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Servicio de Interés</FormLabel>
+                        <FormLabel className="text-gray-300">
+                          Servicio de Interés
+                        </FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-service">
+                            <SelectTrigger
+                              className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
+                              data-testid="select-service"
+                            >
                               <SelectValue placeholder="Selecciona un servicio" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="bg-void border-white/10">
                             {CONTACT_SERVICES.map((service) => (
-                              <SelectItem key={service.value} value={service.value}>
+                              <SelectItem
+                                key={service.value}
+                                value={service.value}
+                                className="text-white hover:bg-coco-gold/20"
+                              >
                                 {service.label}
                               </SelectItem>
                             ))}
@@ -190,12 +219,13 @@ export default function ContactSection() {
                     name="message"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mensaje</FormLabel>
+                        <FormLabel className="text-gray-300">Mensaje</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            rows={4} 
-                            placeholder="Cuéntanos sobre tu viaje..." 
-                            {...field} 
+                          <Textarea
+                            rows={4}
+                            placeholder="Cuéntanos sobre tu viaje..."
+                            {...field}
+                            className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                             data-testid="textarea-message"
                           />
                         </FormControl>
@@ -204,10 +234,10 @@ export default function ContactSection() {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    className="w-full bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]"
+                    size="lg"
                     disabled={contactMutation.isPending}
                     data-testid="button-send-message"
                   >
@@ -221,28 +251,37 @@ export default function ContactSection() {
 
           {/* Contact Info */}
           <div className="space-y-8">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-2xl">Información de Contacto</CardTitle>
+            <Card className="shadow-lg glass-panel border-white/10">
+              <CardHeader className="border-b border-white/10">
+                <CardTitle className="text-2xl text-white font-serif">
+                  Información de Contacto
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 bg-transparent">
                 {contactInfo.map((info, index) => {
                   const IconComponent = info.icon;
                   return (
-                    <div key={index} className="flex items-start" data-testid={`contact-info-${index}`}>
-                      <div className={`${info.color} text-white w-12 h-12 rounded-lg flex items-center justify-center mr-4`}>
-                        <IconComponent className="w-6 h-6" />
+                    <div
+                      key={index}
+                      className="flex items-start"
+                      data-testid={`contact-info-${index}`}
+                    >
+                      <div className="border border-coco-gold/30 bg-void/50 w-12 h-12 rounded-lg flex items-center justify-center mr-4">
+                        <IconComponent className="w-6 h-6 text-coco-gold" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-card-foreground">{info.title}</h4>
+                        <h4 className="font-semibold text-white">{info.title}</h4>
                         {info.href ? (
-                          <a href={info.href} className="text-muted-foreground hover:text-primary">
+                          <a
+                            href={info.href}
+                            className="text-coco-gold hover:text-coco-gold/80 transition"
+                          >
                             {info.value}
                           </a>
                         ) : (
-                          <p className="text-muted-foreground">{info.value}</p>
+                          <p className="text-gray-300">{info.value}</p>
                         )}
-                        <p className="text-sm text-muted-foreground">{info.detail}</p>
+                        <p className="text-sm text-gray-500">{info.detail}</p>
                       </div>
                     </div>
                   );
@@ -250,15 +289,20 @@ export default function ContactSection() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl">¿Por Qué Elegirnos?</CardTitle>
+            <Card className="shadow-lg glass-panel border-white/10">
+              <CardHeader className="border-b border-white/10">
+                <CardTitle className="text-xl text-white font-serif">
+                  ¿Por Qué Elegirnos?
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-transparent">
                 <ul className="space-y-3">
                   {benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-center text-muted-foreground">
-                      <Check className="w-5 h-5 mr-3 text-accent" />
+                    <li
+                      key={index}
+                      className="flex items-center text-gray-300"
+                    >
+                      <Check className="w-5 h-5 mr-3 text-coco-gold" />
                       {benefit}
                     </li>
                   ))}

@@ -56,11 +56,11 @@ export default function BookingWidget() {
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto lg:mx-0 shadow-2xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-primary">Reserva Tu Transporte</CardTitle>
+    <Card className="w-full max-w-lg mx-auto lg:mx-0 shadow-2xl glass-panel border-white/10">
+      <CardHeader className="border-b border-white/10">
+        <CardTitle className="text-2xl font-serif font-bold text-white">Reserva Tu Transporte</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="bg-transparent">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -189,16 +189,21 @@ export default function BookingWidget() {
               )}
             />
 
-            <Button type="submit" className="w-full" size="lg" data-testid="button-search-availability">
+            <Button 
+              type="submit" 
+              className="w-full bg-white text-black hover:bg-coco-gold hover:text-black transition shadow-[0_0_20px_rgba(255,255,255,0.2)] font-bold uppercase text-xs tracking-[0.2em]" 
+              size="lg" 
+              data-testid="button-search-availability"
+            >
               <Search className="w-5 h-5 mr-2" />
               Buscar Disponibilidad
             </Button>
 
             {estimatedPrice && (
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
+              <div className="text-center p-4 bg-coco-gold/10 border border-coco-gold/30 rounded-lg">
+                <p className="text-sm text-gray-300">
                   Precio estimado desde{" "}
-                  <span className="font-bold text-primary" data-testid="text-estimated-price">
+                  <span className="font-bold text-coco-gold" data-testid="text-estimated-price">
                     ${estimatedPrice} USD
                   </span>
                 </p>

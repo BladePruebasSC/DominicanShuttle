@@ -29,6 +29,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    port: 5000,
+    host: true, // Permite acceso desde cualquier IP
+    open: true, // Abre automáticamente el navegador
     fs: {
       strict: true,
       deny: ["**/.*"],
