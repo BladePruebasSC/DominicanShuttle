@@ -13,7 +13,6 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import SecretAdmin from "@/pages/secret-admin";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
-import WhatsAppFloat from "@/components/whatsapp-float";
 import InteractiveChat from "@/components/interactive-chat";
 
 function Router() {
@@ -41,7 +40,6 @@ function App() {
             <Router />
           </main>
           <Footer />
-          <WhatsAppFloat />
           <InteractiveChat />
         </div>
         <Toaster />

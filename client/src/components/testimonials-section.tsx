@@ -2,6 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const testimonials = [
   {
@@ -89,26 +96,26 @@ export default function TestimonialsSection() {
 
   return (
     <>
-      {/* Reseña flotante única */}
+      {/* Reseña flotante única - Solo en móvil, más pequeña y discreta */}
       {isVisible && (
-        <div className="fixed bottom-20 left-4 md:left-6 z-40 max-w-[320px] pointer-events-auto">
-          <div className="glass-panel rounded-sm p-4 border-l-4 border-coco-gold shadow-2xl animate-fade-in-up">
-            <div className="flex items-start gap-3">
-              <div className="flex text-coco-gold text-sm gap-0.5 flex-shrink-0">
+        <div className="fixed bottom-4 left-2 md:hidden z-30 max-w-[200px] pointer-events-auto">
+          <div className="glass-panel rounded-sm p-2 border-l-2 border-coco-gold/50 shadow-lg animate-fade-in-up">
+            <div className="flex items-start gap-2">
+              <div className="flex text-coco-gold text-[10px] gap-0.5 flex-shrink-0">
                 {[...Array(currentReview.rating)].map((_, i) => (
-                  <i key={i} className="fas fa-star text-xs"></i>
+                  <i key={i} className="fas fa-star text-[8px]"></i>
                 ))}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-serif italic leading-relaxed mb-2">
+                <p className="text-white text-[10px] font-serif italic leading-tight mb-1 line-clamp-2">
                   "{currentReview.review}"
                 </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-400 text-[9px] uppercase tracking-wider">
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-gray-400 text-[7px] uppercase tracking-wider truncate">
                     — {currentReview.name}
                   </p>
-                  <span className="text-gray-500 text-[8px] uppercase tracking-widest">
-                    via {currentReview.source}
+                  <span className="text-gray-500 text-[6px] uppercase tracking-widest">
+                    {currentReview.source}
                   </span>
                 </div>
               </div>
@@ -147,53 +154,134 @@ export default function TestimonialsSection() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
+          {/* Carrusel en desktop, grid en móvil */}
+          <div className="hidden md:block">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {testimonials.map((testimonial, index) => (
+                  <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                    <Card
+                      className="hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 h-full"
+                      data-testid={`card-testimonial-${index}`}
+                    >
+                      <CardContent className="p-4 md:p-6">
+                        {/* Header con fuente y rating */}
+                        <div className="flex items-center justify-between mb-3 md:mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="flex text-coco-gold">
+                              {[...Array(testimonial.rating)].map((_, i) => (
+                                <i key={i} className="fas fa-star text-xs"></i>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-gray-500 text-[9px] uppercase tracking-widest">
+                            {testimonial.source}
+                          </span>
+                        </div>
+
+                        {/* Review text */}
+                        <p
+                          className="text-gray-300 mb-3 md:mb-4 text-xs md:text-sm leading-relaxed font-serif italic line-clamp-4"
+                          data-testid={`text-review-${index}`}
+                        >
+                          "{testimonial.review}"
+                        </p>
+
+                        {/* Footer con avatar y nombre */}
+                        <div className="flex items-center justify-between pt-3 md:pt-4 border-t border-white/10">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div
+                              className={`w-8 h-8 md:w-10 md:h-10 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold text-[10px] md:text-xs`}
+                            >
+                              {testimonial.initials}
+                            </div>
+                            <div>
+                              <div
+                                className="font-semibold text-white text-xs md:text-sm"
+                                data-testid={`text-name-${index}`}
+                              >
+                                {testimonial.name}
+                              </div>
+                              <div
+                                className="text-[10px] md:text-xs text-gray-500"
+                                data-testid={`text-date-${index}`}
+                              >
+                                {testimonial.date}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Icono de verificación según la fuente */}
+                          {testimonial.source === "Google" && (
+                            <i className="fab fa-google text-coco-gold text-base md:text-lg"></i>
+                          )}
+                          {testimonial.source === "TripAdvisor" && (
+                            <i className="fab fa-tripadvisor text-coco-gold text-base md:text-lg"></i>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden lg:flex -left-12 border-white/20 text-white hover:bg-white/10 hover:border-coco-gold/50" />
+              <CarouselNext className="hidden lg:flex -right-12 border-white/20 text-white hover:bg-white/10 hover:border-coco-gold/50" />
+            </Carousel>
+          </div>
+
+          {/* Grid en móvil (más compacto) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {testimonials.slice(0, 3).map((testimonial, index) => (
               <Card
                 key={index}
                 className="hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30"
                 data-testid={`card-testimonial-${index}`}
               >
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   {/* Header con fuente y rating */}
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="flex text-coco-gold">
                         {[...Array(testimonial.rating)].map((_, i) => (
-                          <i key={i} className="fas fa-star text-xs"></i>
+                          <i key={i} className="fas fa-star text-[10px]"></i>
                         ))}
                       </div>
                     </div>
-                    <span className="text-gray-500 text-[9px] uppercase tracking-widest">
+                    <span className="text-gray-500 text-[8px] uppercase tracking-widest">
                       {testimonial.source}
                     </span>
                   </div>
 
                   {/* Review text */}
                   <p
-                    className="text-gray-300 mb-4 text-sm leading-relaxed font-serif italic"
+                    className="text-gray-300 mb-3 text-xs leading-relaxed font-serif italic line-clamp-3"
                     data-testid={`text-review-${index}`}
                   >
                     "{testimonial.review}"
                   </p>
 
                   {/* Footer con avatar y nombre */}
-                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2">
                       <div
-                        className={`w-10 h-10 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold text-xs`}
+                        className={`w-8 h-8 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold text-[10px]`}
                       >
                         {testimonial.initials}
                       </div>
                       <div>
                         <div
-                          className="font-semibold text-white text-sm"
+                          className="font-semibold text-white text-xs"
                           data-testid={`text-name-${index}`}
                         >
                           {testimonial.name}
                         </div>
                         <div
-                          className="text-xs text-gray-500"
+                          className="text-[9px] text-gray-500"
                           data-testid={`text-date-${index}`}
                         >
                           {testimonial.date}
@@ -202,10 +290,10 @@ export default function TestimonialsSection() {
                     </div>
                     {/* Icono de verificación según la fuente */}
                     {testimonial.source === "Google" && (
-                      <i className="fab fa-google text-coco-gold text-lg"></i>
+                      <i className="fab fa-google text-coco-gold text-sm"></i>
                     )}
                     {testimonial.source === "TripAdvisor" && (
-                      <i className="fab fa-tripadvisor text-coco-gold text-lg"></i>
+                      <i className="fab fa-tripadvisor text-coco-gold text-sm"></i>
                     )}
                   </div>
                 </CardContent>

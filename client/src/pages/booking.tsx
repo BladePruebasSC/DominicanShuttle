@@ -16,11 +16,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { InsertBooking } from "@shared/schema";
+import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
+import RouteMap from "@/components/route-map";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 
 export default function Booking() {
   const [currentStep, setCurrentStep] = useState(1);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
+  const [showMap, setShowMap] = useState(false);
+  const [originPlaceId, setOriginPlaceId] = useState<string>("");
+  const [destinationPlaceId, setDestinationPlaceId] = useState<string>("");
+  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | undefined>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -31,6 +42,18 @@ export default function Booking() {
       passengers: 1,
     },
   });
+
+  // Mostrar mapa cuando hay origen y destino
+  const origin = form.watch("origin");
+  const destination = form.watch("destination");
+  
+  useEffect(() => {
+    if (origin && destination) {
+      setShowMap(true);
+    } else {
+      setShowMap(false);
+    }
+  }, [origin, destination]);
 
   // Leer datos del sessionStorage si existen
   useEffect(() => {
@@ -174,10 +197,10 @@ export default function Booking() {
         <Card className="shadow-xl glass-panel border-white/10">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="text-2xl text-white font-serif">
-              {currentStep === 1 && "Detalles del Viaje"}
-              {currentStep === 2 && "Información Personal"}
-              {currentStep === 3 && "Confirmar Reserva"}
-              {currentStep === 4 && "¡Reserva Confirmada!"}
+              {currentStep === 1 && "Trip Details"}
+              {currentStep === 2 && "Personal Information"}
+              {currentStep === 3 && "Confirm Booking"}
+              {currentStep === 4 && "Booking Confirmed!"}
             </CardTitle>
           </CardHeader>
           <CardContent className="bg-transparent">
@@ -208,34 +231,27 @@ export default function Booking() {
                           name="origin"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Origen</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger 
-                                    className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
-                                    data-testid="select-origin"
-                                  >
-                                    <SelectValue placeholder="Selecciona origen" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-void border-white/10">
-                                  {LOCATIONS.AIRPORTS.map((airport) => (
-                                    <SelectItem 
-                                      key={airport.value} 
-                                      value={airport.value}
-                                      className="text-white hover:bg-coco-gold/20"
-                                    >
-                                      {airport.label}
-                                    </SelectItem>
-                                  ))}
-                                  <SelectItem 
-                                    value="hotel"
-                                    className="text-white hover:bg-coco-gold/20"
-                                  >
-                                    Hotel/Resort
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">From *</FormLabel>
+                              <FormControl>
+                                <GooglePlacesAutocomplete
+                                  value={field.value || ""}
+                                  onChange={(value, placeId) => {
+                                    field.onChange(value);
+                                    if (placeId) setOriginPlaceId(placeId);
+                                  }}
+                                  onPlaceSelect={(place) => {
+                                    if (place.geometry?.location) {
+                                      setOriginCoords({
+                                        lat: place.geometry.location.lat(),
+                                        lng: place.geometry.location.lng(),
+                                      });
+                                    }
+                                  }}
+                                  placeholder="Buscar origen (aeropuerto, hotel, dirección...)"
+                                  label=""
+                                  className="w-full"
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -246,33 +262,46 @@ export default function Booking() {
                           name="destination"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Destino</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger 
-                                    className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
-                                    data-testid="select-destination"
-                                  >
-                                    <SelectValue placeholder="Selecciona destino" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-void border-white/10">
-                                  {LOCATIONS.DESTINATIONS.map((destination) => (
-                                    <SelectItem 
-                                      key={destination.value} 
-                                      value={destination.value}
-                                      className="text-white hover:bg-coco-gold/20"
-                                    >
-                                      {destination.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">To *</FormLabel>
+                              <FormControl>
+                                <GooglePlacesAutocomplete
+                                  value={field.value || ""}
+                                  onChange={(value, placeId) => {
+                                    field.onChange(value);
+                                    if (placeId) setDestinationPlaceId(placeId);
+                                  }}
+                                  onPlaceSelect={(place) => {
+                                    if (place.geometry?.location) {
+                                      setDestinationCoords({
+                                        lat: place.geometry.location.lat(),
+                                        lng: place.geometry.location.lng(),
+                                      });
+                                    }
+                                  }}
+                                  placeholder="Buscar destino (hotel, playa, dirección...)"
+                                  label=""
+                                  className="w-full"
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
+
+                      {/* Mapa de ruta */}
+                      {showMap && form.watch("origin") && form.watch("destination") && (
+                        <div className="mt-6">
+                          <RouteMap
+                            origin={form.watch("origin")}
+                            destination={form.watch("destination")}
+                            originPlaceId={originPlaceId}
+                            destinationPlaceId={destinationPlaceId}
+                            originCoords={originCoords}
+                            destinationCoords={destinationCoords}
+                          />
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
@@ -280,16 +309,69 @@ export default function Booking() {
                           name="pickupDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Fecha de Recogida</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="datetime-local" 
-                                  {...field}
-                                  min={new Date().toISOString().slice(0, 16)}
-                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
-                                  data-testid="input-pickup-date"
-                                />
-                              </FormControl>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Pick-up date *</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      className={`w-full h-12 justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                        !field.value && "text-gray-500"
+                                      }`}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {field.value ? (
+                                        format(new Date(field.value), "PPP")
+                                      ) : (
+                                        <span>Pick a date</span>
+                                      )}
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={field.value ? new Date(field.value) : undefined}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        // Mantener la hora existente si hay
+                                        if (field.value) {
+                                          const existingDate = new Date(field.value);
+                                          date.setHours(existingDate.getHours());
+                                          date.setMinutes(existingDate.getMinutes());
+                                        } else {
+                                          date.setHours(0);
+                                          date.setMinutes(0);
+                                        }
+                                        field.onChange(date.toISOString());
+                                      }
+                                    }}
+                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                    initialFocus
+                                    className="bg-void text-white"
+                                    classNames={{
+                                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                      month: "space-y-4",
+                                      caption: "flex justify-center pt-1 relative items-center",
+                                      caption_label: "text-sm font-medium text-white",
+                                      nav: "space-x-1 flex items-center",
+                                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                      nav_button_previous: "absolute left-1",
+                                      nav_button_next: "absolute right-1",
+                                      table: "w-full border-collapse space-y-1",
+                                      head_row: "flex",
+                                      head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                      row: "flex w-full mt-2",
+                                      cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                      day_selected: "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                      day_today: "bg-coco-gold/30 text-white",
+                                      day_outside: "text-gray-500 opacity-50",
+                                      day_disabled: "text-gray-500 opacity-50",
+                                    }}
+                                  />
+                                </PopoverContent>
+                              </Popover>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -297,26 +379,125 @@ export default function Booking() {
 
                         <FormField
                           control={form.control}
+                          name="pickupDate"
+                          render={({ field }) => {
+                            // Extraer hora y minutos del timestamp
+                            const dateValue = field.value ? new Date(field.value) : new Date();
+                            const hours = String(dateValue.getHours()).padStart(2, "0");
+                            const minutes = String(dateValue.getMinutes()).padStart(2, "0");
+                            
+                            // Generar opciones de horas (00-23)
+                            const hourOptions = Array.from({ length: 24 }, (_, i) => 
+                              String(i).padStart(2, "0")
+                            );
+                            
+                            // Generar opciones de minutos (00, 15, 30, 45)
+                            const minuteOptions = ["00", "15", "30", "45"];
+
+                            const handleTimeChange = (newHours: string, newMinutes: string) => {
+                              if (field.value) {
+                                const date = new Date(field.value);
+                                date.setHours(parseInt(newHours));
+                                date.setMinutes(parseInt(newMinutes));
+                                field.onChange(date.toISOString());
+                              } else {
+                                const today = new Date();
+                                today.setHours(parseInt(newHours));
+                                today.setMinutes(parseInt(newMinutes));
+                                field.onChange(today.toISOString());
+                              }
+                            };
+
+                            return (
+                              <FormItem>
+                                <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">
+                                  Pick-up time * <span className="text-gray-500 text-[10px] normal-case">(24-hour format)</span>
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="flex items-center gap-2">
+                                    <Select
+                                      value={hours}
+                                      onValueChange={(value) => handleTimeChange(value, minutes)}
+                                    >
+                                      <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                        <SelectValue placeholder="HH" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-void border-white/10 max-h-[200px]">
+                                        {hourOptions.map((hour) => (
+                                          <SelectItem 
+                                            key={hour} 
+                                            value={hour}
+                                            className="text-white hover:bg-coco-gold/20"
+                                          >
+                                            {hour}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    <span className="text-white text-lg font-bold">:</span>
+                                    
+                                    <Select
+                                      value={minutes}
+                                      onValueChange={(value) => handleTimeChange(hours, value)}
+                                    >
+                                      <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                        <SelectValue placeholder="MM" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-void border-white/10">
+                                        {minuteOptions.map((minute) => (
+                                          <SelectItem 
+                                            key={minute} 
+                                            value={minute}
+                                            className="text-white hover:bg-coco-gold/20"
+                                          >
+                                            {minute}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
                           name="passengers"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Número de Pasajeros</FormLabel>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Passengers *</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="1" 
-                                  max="50"
-                                  {...field}
-                                  onChange={(e) => {
-                                    const passengers = parseInt(e.target.value);
+                                <Select
+                                  value={field.value?.toString() || "1"}
+                                  onValueChange={(value) => {
+                                    const passengers = parseInt(value);
                                     field.onChange(passengers);
                                     const recommendedVehicle = getRecommendedVehicle(passengers);
                                     setSelectedVehicle(recommendedVehicle);
                                     form.setValue("vehicleType", recommendedVehicle);
                                   }}
-                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
-                                  data-testid="input-passengers"
-                                />
+                                >
+                                  <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12">
+                                    <SelectValue placeholder="Selecciona" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-void border-white/10 max-h-[200px]">
+                                    {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                                      <SelectItem 
+                                        key={num} 
+                                        value={num.toString()}
+                                        className="text-white hover:bg-coco-gold/20"
+                                      >
+                                        {num} {num === 1 ? "passenger" : "passengers"}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -329,7 +510,7 @@ export default function Booking() {
                         name="serviceType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-300">Tipo de Servicio</FormLabel>
+                            <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Service Type</FormLabel>
                             <FormControl>
                               <RadioGroup
                                 onValueChange={field.onChange}
@@ -341,7 +522,7 @@ export default function Booking() {
                                   <div key={service.value} className="flex items-center space-x-2 border border-white/10 rounded-lg p-3 hover:border-coco-gold/30 transition-colors">
                                     <RadioGroupItem value={service.value} id={service.value} className="border-coco-gold text-coco-gold" />
                                     <label htmlFor={service.value} className="text-sm font-medium text-gray-300 cursor-pointer">
-                                      {service.label}
+                                      {service.value === "one_way" ? "One-way" : "Round trip"}
                                     </label>
                                   </div>
                                 ))}
@@ -358,17 +539,75 @@ export default function Booking() {
                           name="returnDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Fecha de Regreso</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="datetime-local" 
-                                  {...field}
-                                  value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
-                                  onChange={(e) => field.onChange(e.target.value)}
-                                  className="bg-void/50 border-white/10 text-white focus:border-coco-gold"
-                                  data-testid="input-return-date"
-                                />
-                              </FormControl>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Return Date</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      className={`w-full h-12 justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                        !field.value && "text-gray-500"
+                                      }`}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {field.value ? (
+                                        format(new Date(field.value), "PPP")
+                                      ) : (
+                                        <span>Pick a date</span>
+                                      )}
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={field.value ? new Date(field.value) : undefined}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        // Mantener la hora existente si hay
+                                        if (field.value) {
+                                          const existingDate = new Date(field.value);
+                                          date.setHours(existingDate.getHours());
+                                          date.setMinutes(existingDate.getMinutes());
+                                        } else {
+                                          date.setHours(0);
+                                          date.setMinutes(0);
+                                        }
+                                        field.onChange(date.toISOString());
+                                      }
+                                    }}
+                                    disabled={(date) => {
+                                      const pickupDate = form.watch("pickupDate");
+                                      if (pickupDate) {
+                                        return date < new Date(pickupDate);
+                                      }
+                                      return date < new Date(new Date().setHours(0, 0, 0, 0));
+                                    }}
+                                    initialFocus
+                                    className="bg-void text-white"
+                                    classNames={{
+                                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                      month: "space-y-4",
+                                      caption: "flex justify-center pt-1 relative items-center",
+                                      caption_label: "text-sm font-medium text-white",
+                                      nav: "space-x-1 flex items-center",
+                                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                      nav_button_previous: "absolute left-1",
+                                      nav_button_next: "absolute right-1",
+                                      table: "w-full border-collapse space-y-1",
+                                      head_row: "flex",
+                                      head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                      row: "flex w-full mt-2",
+                                      cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                      day_selected: "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                      day_today: "bg-coco-gold/30 text-white",
+                                      day_outside: "text-gray-500 opacity-50",
+                                      day_disabled: "text-gray-500 opacity-50",
+                                    }}
+                                  />
+                                </PopoverContent>
+                              </Popover>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -378,50 +617,116 @@ export default function Booking() {
                       <FormField
                         control={form.control}
                         name="vehicleType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Tipo de Vehículo</FormLabel>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {VEHICLE_TYPES.map((vehicle) => (
-                                <div
-                                  key={vehicle.value}
-                                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                                    field.value === vehicle.value 
-                                      ? "border-coco-gold bg-coco-gold/10" 
-                                      : "border-white/10 hover:border-coco-gold/30 bg-void/30"
-                                  }`}
-                                  onClick={() => {
-                                    field.onChange(vehicle.value);
-                                    setSelectedVehicle(vehicle.value);
-                                  }}
-                                  data-testid={`vehicle-option-${vehicle.value}`}
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <h4 className="font-medium text-white">{vehicle.label}</h4>
-                                      <p className="text-sm text-gray-400">
-                                        Desde ${vehicle.price} USD
-                                      </p>
+                        render={({ field }) => {
+                          const getRecommendedVehicle = () => {
+                            const passengers = form.watch("passengers") || 1;
+                            if (passengers <= 3) return "sedan";
+                            if (passengers <= 6) return "suv";
+                            if (passengers <= 12) return "van";
+                            return "bus";
+                          };
+
+                          return (
+                            <FormItem>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Choose your vehicle *</FormLabel>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {VEHICLE_TYPES.map((vehicle) => {
+                                  const isRecommended = vehicle.value === getRecommendedVehicle();
+                                  const isSelected = field.value === vehicle.value;
+                                  const price = form.watch("serviceType") === "round_trip" 
+                                    ? Math.round(vehicle.price * 1.8) 
+                                    : vehicle.price;
+
+                                  return (
+                                    <div
+                                      key={vehicle.value}
+                                      onClick={() => {
+                                        field.onChange(vehicle.value);
+                                        setSelectedVehicle(vehicle.value);
+                                      }}
+                                      className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                        isSelected
+                                          ? "border-coco-gold bg-coco-gold/10 ring-2 ring-coco-gold/50"
+                                          : "border-white/10 hover:border-coco-gold/30 bg-void/30"
+                                      }`}
+                                      data-testid={`vehicle-option-${vehicle.value}`}
+                                    >
+                                      {/* Vehicle Image */}
+                                      <div className="relative h-32 w-full overflow-hidden bg-void/50">
+                                        <img
+                                          src={vehicle.image}
+                                          alt={vehicle.label}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            // Fallback si la imagen no carga
+                                            e.currentTarget.src = "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=" + encodeURIComponent(vehicle.label);
+                                          }}
+                                        />
+                                        {isRecommended && (
+                                          <span className="absolute top-2 right-2 text-xs bg-coco-gold/90 text-black px-2 py-1 rounded font-bold">
+                                            Recomendado
+                                          </span>
+                                        )}
+                                        {isSelected && (
+                                          <div className="absolute top-2 left-2 w-6 h-6 bg-coco-gold rounded-full flex items-center justify-center">
+                                            <svg className="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20">
+                                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Vehicle Info */}
+                                      <div className="p-4">
+                                        <h5 className="font-semibold text-white text-sm mb-2">{vehicle.label}</h5>
+                                        
+                                        {/* Capacity Icons */}
+                                        <div className="flex items-center gap-4 text-xs text-gray-400 mb-3">
+                                          <div className="flex items-center gap-1">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                            </svg>
+                                            <span>{vehicle.capacity}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                                            </svg>
+                                            <span>{vehicle.luggage} maletas</span>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Price */}
+                                        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                                          <div>
+                                            <span className="text-gray-400 text-xs">
+                                              {form.watch("serviceType") === "round_trip" ? "Round trip" : "One way"}
+                                            </span>
+                                            <p className="text-coco-gold font-bold text-lg">${price} USD</p>
+                                          </div>
+                                          <input
+                                            type="radio"
+                                            checked={isSelected}
+                                            onChange={() => {}}
+                                            className="w-5 h-5 text-coco-gold accent-coco-gold cursor-pointer"
+                                          />
+                                        </div>
+                                      </div>
                                     </div>
-                                    <input
-                                      type="radio"
-                                      checked={field.value === vehicle.value}
-                                      onChange={() => {}}
-                                      className="text-coco-gold accent-coco-gold"
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                                  );
+                                })}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
 
                       {selectedVehicle && form.watch("passengers") && form.watch("serviceType") && (
                         <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-6">
                           <div className="flex justify-between items-center flex-wrap gap-2">
-                            <span className="text-lg font-medium text-white">Precio estimado:</span>
+                            <span className="text-lg font-medium text-white">Estimated price:</span>
                             <Badge className="bg-coco-gold/20 text-coco-gold border border-coco-gold/30 text-xl font-bold px-4 py-2">
                               ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), selectedVehicle)} USD
                             </Badge>
@@ -439,10 +744,10 @@ export default function Booking() {
                           name="customerName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Nombre Completo</FormLabel>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Full Name</FormLabel>
                               <FormControl>
                                 <Input 
-                                  placeholder="Tu nombre completo" 
+                                  placeholder="Your full name" 
                                   {...field} 
                                   className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                                   data-testid="input-customer-name" 
@@ -458,7 +763,7 @@ export default function Booking() {
                           name="customerEmail"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-300">Email</FormLabel>
+                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Email</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="email" 
@@ -479,7 +784,7 @@ export default function Booking() {
                         name="customerPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-300">Teléfono (WhatsApp)</FormLabel>
+                            <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Phone (WhatsApp)</FormLabel>
                             <FormControl>
                               <Input 
                                 type="tel" 
@@ -499,11 +804,11 @@ export default function Booking() {
                         name="specialRequests"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-300">Solicitudes Especiales (Opcional)</FormLabel>
+                            <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Special Requests (Optional)</FormLabel>
                             <FormControl>
                               <Textarea 
                                 rows={3} 
-                                placeholder="Silla para bebé, equipaje extra, etc." 
+                                placeholder="Baby seat, extra luggage, etc." 
                                 {...field} 
                                 className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                                 data-testid="textarea-special-requests"
@@ -530,10 +835,10 @@ export default function Booking() {
                             )}
                           </div>
                           <div className="space-y-2">
-                            <p className="text-gray-300"><strong className="text-white">Pasajeros:</strong> {form.watch("passengers")}</p>
-                            <p className="text-gray-300"><strong className="text-white">Vehículo:</strong> {VEHICLE_TYPES.find(v => v.value === form.watch("vehicleType"))?.label}</p>
-                            <p className="text-gray-300"><strong className="text-white">Servicio:</strong> {SERVICE_TYPES.find(s => s.value === form.watch("serviceType"))?.label}</p>
-                            <p className="text-gray-300"><strong className="text-white">Precio Total:</strong> 
+                            <p className="text-gray-300"><strong className="text-white">Passengers:</strong> {form.watch("passengers")}</p>
+                            <p className="text-gray-300"><strong className="text-white">Vehicle:</strong> {VEHICLE_TYPES.find(v => v.value === form.watch("vehicleType"))?.label}</p>
+                            <p className="text-gray-300"><strong className="text-white">Service:</strong> {form.watch("serviceType") === "one_way" ? "One-way" : "Round trip"}</p>
+                            <p className="text-gray-300"><strong className="text-white">Total Price:</strong> 
                               <Badge className="ml-2 bg-coco-gold/20 text-coco-gold border border-coco-gold/30">
                                 ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), form.watch("vehicleType"))} USD
                               </Badge>
@@ -543,12 +848,12 @@ export default function Booking() {
                       </div>
 
                       <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-4">
-                        <h4 className="font-semibold text-coco-gold mb-2">Información Importante:</h4>
+                        <h4 className="font-semibold text-coco-gold mb-2">Important Information:</h4>
                         <ul className="text-sm text-gray-300 space-y-1">
-                          <li>• El conductor te contactará 30 minutos antes de la recogida</li>
-                          <li>• El pago se realiza directamente al conductor</li>
-                          <li>• Incluye agua gratis y Wi-Fi en vehículos premium</li>
-                          <li>• Cancelación gratuita hasta 24 horas antes</li>
+                          <li>• The driver will contact you 30 minutes before pickup</li>
+                          <li>• Payment is made directly to the driver</li>
+                          <li>• Includes free water and Wi-Fi in premium vehicles</li>
+                          <li>• Free cancellation up to 24 hours before</li>
                         </ul>
                       </div>
                     </div>
@@ -574,7 +879,7 @@ export default function Booking() {
                         className="ml-auto bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]"
                         data-testid="button-next"
                       >
-                        Siguiente
+                        Next
                       </Button>
                     ) : currentStep === 3 ? (
                       <Button 
@@ -583,7 +888,7 @@ export default function Booking() {
                         disabled={bookingMutation.isPending}
                         data-testid="button-confirm-booking"
                       >
-                        {bookingMutation.isPending ? "Procesando..." : "Confirmar Reserva"}
+                        {bookingMutation.isPending ? "Processing..." : "Confirm Booking"}
                       </Button>
                     ) : null}
                   </div>

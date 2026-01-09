@@ -90,7 +90,7 @@ export default function InteractiveChat() {
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-40 flex flex-col items-start">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
         <div className="mb-4 w-80 md:w-96 bg-glass-dark border border-white/10 shadow-2xl rounded-lg overflow-hidden flex flex-col max-h-[500px]">
