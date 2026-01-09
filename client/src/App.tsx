@@ -14,6 +14,7 @@ import SecretAdmin from "@/pages/secret-admin";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import InteractiveChat from "@/components/interactive-chat";
+import { useSecretCode } from "@/hooks/use-secret-code";
 
 function Router() {
   return (
@@ -31,6 +32,9 @@ function Router() {
 }
 
 function App() {
+  // Activar detección de código secreto
+  useSecretCode();
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

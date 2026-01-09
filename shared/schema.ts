@@ -92,6 +92,18 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
   status: true,
 });
 
+export const insertTourSchema = createInsertSchema(tours).omit({
+  id: true,
+});
+
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+  id: true,
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -102,3 +114,6 @@ export type Tour = typeof tours.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertTour = z.infer<typeof insertTourSchema>;
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;

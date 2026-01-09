@@ -382,7 +382,17 @@ export default function Booking() {
                           name="pickupDate"
                           render={({ field }) => {
                             // Extraer hora y minutos del timestamp
-                            const dateValue = field.value ? new Date(field.value) : new Date();
+                            let dateValue: Date;
+                            if (field.value) {
+                              dateValue = new Date(field.value);
+                              // Si la fecha no es válida, usar fecha de hoy
+                              if (isNaN(dateValue.getTime())) {
+                                dateValue = new Date();
+                              }
+                            } else {
+                              dateValue = new Date();
+                            }
+                            
                             const hours = String(dateValue.getHours()).padStart(2, "0");
                             const minutes = String(dateValue.getMinutes()).padStart(2, "0");
                             
@@ -395,16 +405,38 @@ export default function Booking() {
                             const minuteOptions = ["00", "15", "30", "45"];
 
                             const handleTimeChange = (newHours: string, newMinutes: string) => {
+                              const hoursNum = parseInt(newHours) || 0;
+                              const minutesNum = parseInt(newMinutes) || 0;
+                              
                               if (field.value) {
                                 const date = new Date(field.value);
-                                date.setHours(parseInt(newHours));
-                                date.setMinutes(parseInt(newMinutes));
-                                field.onChange(date.toISOString());
+                                if (!isNaN(date.getTime())) {
+                                  date.setHours(hoursNum);
+                                  date.setMinutes(minutesNum);
+                                  date.setSeconds(0);
+                                  date.setMilliseconds(0);
+                                  field.onChange(date.toISOString());
+                                } else {
+                                  // Si la fecha guardada no es válida, crear una nueva con la fecha de hoy
+                                  const today = new Date();
+                                  today.setHours(hoursNum);
+                                  today.setMinutes(minutesNum);
+                                  today.setSeconds(0);
+                                  today.setMilliseconds(0);
+                                  field.onChange(today.toISOString());
+                                }
                               } else {
+                                // Si no hay fecha, usar la fecha de hoy como base
                                 const today = new Date();
-                                today.setHours(parseInt(newHours));
-                                today.setMinutes(parseInt(newMinutes));
-                                field.onChange(today.toISOString());
+                                today.setHours(hoursNum);
+                                today.setMinutes(minutesNum);
+                                today.setSeconds(0);
+                                today.setMilliseconds(0);
+                                
+                                // Verificar que la fecha sea válida antes de guardar
+                                if (!isNaN(today.getTime())) {
+                                  field.onChange(today.toISOString());
+                                }
                               }
                             };
 

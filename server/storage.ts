@@ -7,7 +7,10 @@ import {
   type Booking,
   type InsertBooking,
   type ContactMessage,
-  type InsertContactMessage
+  type InsertContactMessage,
+  type InsertTour,
+  type InsertVehicle,
+  type InsertTestimonial
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -21,13 +24,22 @@ export interface IStorage {
   // Vehicle methods
   getAllVehicles(): Promise<Vehicle[]>;
   getVehicleById(id: string): Promise<Vehicle | undefined>;
+  createVehicle(vehicle: any): Promise<Vehicle>;
+  updateVehicle(id: string, vehicle: Partial<Vehicle>): Promise<Vehicle | undefined>;
+  deleteVehicle(id: string): Promise<boolean>;
 
   // Tour methods
   getAllTours(): Promise<Tour[]>;
   getTourById(id: string): Promise<Tour | undefined>;
+  createTour(tour: any): Promise<Tour>;
+  updateTour(id: string, tour: Partial<Tour>): Promise<Tour | undefined>;
+  deleteTour(id: string): Promise<boolean>;
 
   // Testimonial methods
   getAllTestimonials(): Promise<Testimonial[]>;
+  createTestimonial(testimonial: any): Promise<Testimonial>;
+  updateTestimonial(id: string, testimonial: Partial<Testimonial>): Promise<Testimonial | undefined>;
+  deleteTestimonial(id: string): Promise<boolean>;
 
   // Booking methods
   getAllBookings(): Promise<Booking[]>;
@@ -294,6 +306,30 @@ export class MemStorage implements IStorage {
     return this.vehicles.get(id);
   }
 
+  async createVehicle(insertVehicle: InsertVehicle): Promise<Vehicle> {
+    const id = randomUUID();
+    const vehicle: Vehicle = {
+      ...insertVehicle,
+      id,
+      available: insertVehicle.available ?? true,
+    };
+    this.vehicles.set(id, vehicle);
+    return vehicle;
+  }
+
+  async updateVehicle(id: string, updates: Partial<Vehicle>): Promise<Vehicle | undefined> {
+    const vehicle = this.vehicles.get(id);
+    if (!vehicle) return undefined;
+    
+    const updatedVehicle = { ...vehicle, ...updates };
+    this.vehicles.set(id, updatedVehicle);
+    return updatedVehicle;
+  }
+
+  async deleteVehicle(id: string): Promise<boolean> {
+    return this.vehicles.delete(id);
+  }
+
   // Tour methods
   async getAllTours(): Promise<Tour[]> {
     return Array.from(this.tours.values());
@@ -303,9 +339,57 @@ export class MemStorage implements IStorage {
     return this.tours.get(id);
   }
 
+  async createTour(insertTour: InsertTour): Promise<Tour> {
+    const id = randomUUID();
+    const tour: Tour = {
+      ...insertTour,
+      id,
+      popular: insertTour.popular ?? false,
+    };
+    this.tours.set(id, tour);
+    return tour;
+  }
+
+  async updateTour(id: string, updates: Partial<Tour>): Promise<Tour | undefined> {
+    const tour = this.tours.get(id);
+    if (!tour) return undefined;
+    
+    const updatedTour = { ...tour, ...updates };
+    this.tours.set(id, updatedTour);
+    return updatedTour;
+  }
+
+  async deleteTour(id: string): Promise<boolean> {
+    return this.tours.delete(id);
+  }
+
   // Testimonial methods
   async getAllTestimonials(): Promise<Testimonial[]> {
     return Array.from(this.testimonials.values());
+  }
+
+  async createTestimonial(insertTestimonial: InsertTestimonial): Promise<Testimonial> {
+    const id = randomUUID();
+    const testimonial: Testimonial = {
+      ...insertTestimonial,
+      id,
+      verified: insertTestimonial.verified ?? true,
+    };
+    this.testimonials.set(id, testimonial);
+    return testimonial;
+  }
+
+  async updateTestimonial(id: string, updates: Partial<Testimonial>): Promise<Testimonial | undefined> {
+    const testimonial = this.testimonials.get(id);
+    if (!testimonial) return undefined;
+    
+    const updatedTestimonial = { ...testimonial, ...updates };
+    this.testimonials.set(id, updatedTestimonial);
+    return updatedTestimonial;
+  }
+
+  async deleteTestimonial(id: string): Promise<boolean> {
+    return this.testimonials.delete(id);
   }
 
   // Booking methods
