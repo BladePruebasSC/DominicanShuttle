@@ -16,10 +16,38 @@ export const LOCATIONS = {
 };
 
 export const VEHICLE_TYPES = [
-  { value: "sedan", label: "Sedán Económico (1-3 pax)", price: 35 },
-  { value: "suv", label: "SUV Premium (4-6 pax)", price: 60 },
-  { value: "van", label: "Van Grupal (7-12 pax)", price: 120 },
-  { value: "bus", label: "Autobús (15+ pax)", price: 180 },
+  { 
+    value: "sedan", 
+    label: "Sedán Económico", 
+    capacity: "1-3 pax",
+    luggage: "1-3",
+    price: 35,
+    image: "https://images.unsplash.com/photo-1550355291-bbee519a034a?q=80&w=800&auto=format&fit=crop"
+  },
+  { 
+    value: "suv", 
+    label: "SUV Premium", 
+    capacity: "4-6 pax",
+    luggage: "4-6",
+    price: 60,
+    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800&auto=format&fit=crop"
+  },
+  { 
+    value: "van", 
+    label: "Van Grupal", 
+    capacity: "7-12 pax",
+    luggage: "7-12",
+    price: 120,
+    image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800&auto=format&fit=crop"
+  },
+  { 
+    value: "bus", 
+    label: "Autobús", 
+    capacity: "15+ pax",
+    luggage: "15+",
+    price: 180,
+    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=800&auto=format&fit=crop"
+  },
 ];
 
 export const SERVICE_TYPES = [

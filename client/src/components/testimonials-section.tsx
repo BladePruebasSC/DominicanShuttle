@@ -213,17 +213,50 @@ export default function TestimonialsSection() {
             ))}
           </div>
 
-          <div className="mt-12 text-center">
-            <p className="text-sm text-gray-500 mb-4">Calificados como #1 en TripAdvisor</p>
-            <div className="flex items-center justify-center gap-6 flex-wrap">
-              <img
-                src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=150"
-                alt="Premio Excelencia TripAdvisor"
-                className="h-16 opacity-80"
-              />
-              <div className="flex items-center gap-2">
+          {/* TripAdvisor Recognition Section */}
+          <div className="mt-16 text-center border-t border-white/10 pt-12">
+            <span className="text-coco-gold text-[10px] font-bold uppercase tracking-[0.4em] block mb-6">
+              RECONOCIMIENTO
+            </span>
+            <h3 className="text-2xl md:text-3xl font-serif text-white mb-8">
+              Tripadvisor Recognition
+            </h3>
+            
+            {/* TripAdvisor Awards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+              {[2021, 2022, 2023, 2024, 2025].map((year) => (
+                <div
+                  key={year}
+                  className="glass-panel border border-white/10 rounded-lg p-4 hover:border-coco-gold/30 transition-all group"
+                >
+                  <div className="flex flex-col items-center">
+                    <img
+                      src="https://www.tripadvisor.com/img/cdsi/img2/branding/v2/Tripadvisor_lockup_horizontal_secondary-11900-2.svg"
+                      alt="TripAdvisor"
+                      className="h-8 mb-2 opacity-80 group-hover:opacity-100 transition"
+                    />
+                    <p className="text-coco-gold text-xs font-bold">Travelers' Choice</p>
+                    <p className="text-gray-400 text-xs">{year}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Trust Badges */}
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              <div className="flex items-center gap-3 glass-panel border border-white/10 rounded-lg px-4 py-2">
                 <i className="fab fa-google text-coco-gold text-2xl"></i>
-                <span className="text-gray-400 text-sm">Google Business</span>
+                <div className="text-left">
+                  <p className="text-white text-sm font-semibold">Google Business</p>
+                  <p className="text-gray-400 text-xs">359 reseñas • 5.0 ⭐</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 glass-panel border border-white/10 rounded-lg px-4 py-2">
+                <i className="fab fa-tripadvisor text-coco-gold text-2xl"></i>
+                <div className="text-left">
+                  <p className="text-white text-sm font-semibold">TripAdvisor</p>
+                  <p className="text-gray-400 text-xs">Calificado como #1</p>
+                </div>
               </div>
             </div>
           </div>

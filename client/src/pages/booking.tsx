@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBookingSchema } from "@shared/schema";
@@ -31,6 +31,39 @@ export default function Booking() {
       passengers: 1,
     },
   });
+
+  // Leer datos del sessionStorage si existen
+  useEffect(() => {
+    const bookingData = sessionStorage.getItem("bookingData");
+    if (bookingData) {
+      try {
+        const data = JSON.parse(bookingData);
+        if (data.origin) form.setValue("origin", data.origin);
+        if (data.destination) form.setValue("destination", data.destination);
+        if (data.passengers) {
+          const passengers = parseInt(data.passengers);
+          form.setValue("passengers", passengers);
+        }
+        if (data.vehicleType) {
+          setSelectedVehicle(data.vehicleType);
+          form.setValue("vehicleType", data.vehicleType);
+        }
+        if (data.serviceType) form.setValue("serviceType", data.serviceType as "one_way" | "round_trip");
+        if (data.estimatedPrice) setEstimatedPrice(data.estimatedPrice);
+        if (data.pickupDate) form.setValue("pickupDate", data.pickupDate);
+        
+        // Limpiar sessionStorage después de leer
+        sessionStorage.removeItem("bookingData");
+        
+        // Avanzar al paso 2 si hay datos suficientes
+        if (data.origin && data.destination && data.vehicleType) {
+          setCurrentStep(2);
+        }
+      } catch (e) {
+        console.error("Error parsing booking data:", e);
+      }
+    }
+  }, [form]);
 
   const bookingMutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
