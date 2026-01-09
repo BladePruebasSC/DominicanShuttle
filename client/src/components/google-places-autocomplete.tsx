@@ -50,14 +50,27 @@ export default function GooglePlacesAutocomplete({
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
     
+    const isProduction = import.meta.env.MODE === "production";
+    const envKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    
     console.log("🔑 API Key detectada:", apiKey ? "✅ Sí" : "❌ No");
     console.log("🔍 Variables de entorno:", {
-      VITE_GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? "Presente" : "No encontrada",
+      VITE_GOOGLE_MAPS_API_KEY: envKey ? `Presente (${envKey.substring(0, 10)}...)` : "No encontrada",
       MODE: import.meta.env.MODE,
+      PROD: isProduction,
     });
     
     if (!apiKey) {
-      console.warn("⚠️ Google Maps API Key no configurada. Configura VITE_GOOGLE_MAPS_API_KEY en tu archivo .env y reinicia el servidor.");
+      if (isProduction) {
+        console.error("❌ ERROR: Google Maps API Key no configurada en Netlify.");
+        console.error("📋 Pasos para solucionarlo:");
+        console.error("   1. Ve a Netlify > Site settings > Environment variables");
+        console.error("   2. Agrega: VITE_GOOGLE_MAPS_API_KEY = AIzaSyCbiYnzceF5RCEbnOP07NQijBTKtujw56E");
+        console.error("   3. Scope: All scopes (o al menos Build y Production)");
+        console.error("   4. Haz un nuevo deploy (Clear cache and deploy)");
+      } else {
+        console.warn("⚠️ Google Maps API Key no configurada. Configura VITE_GOOGLE_MAPS_API_KEY en tu archivo .env y reinicia el servidor.");
+      }
       // Permitir búsqueda manual sin autocompletado
       return;
     }
@@ -321,7 +334,9 @@ export default function GooglePlacesAutocomplete({
       </div>
       {!hasApiKey && (
         <p className="text-xs text-yellow-500 mt-1">
-          ⚠️ Reinicia el servidor para cargar la API key
+          {import.meta.env.MODE === "production" 
+            ? "⚠️ Configura VITE_GOOGLE_MAPS_API_KEY en Netlify y haz un nuevo deploy"
+            : "⚠️ Reinicia el servidor para cargar la API key"}
         </p>
       )}
 

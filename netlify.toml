@@ -1,6 +1,13 @@
 [build]
   publish = "dist/public"
-  command = "npm install && vite build"
+  command = "npm install && npm run build"
+  environment = { NODE_VERSION = "20" }
+
+# Variables de entorno deben configurarse en el panel de Netlify:
+# Site settings > Environment variables
+# Nombre: VITE_GOOGLE_MAPS_API_KEY
+# Valor: AIzaSyCbiYnzceF5RCEbnOP07NQijBTKtujw56E
+# Scope: All scopes (o al menos Build y Production)
 
 [[redirects]]
   from = "/*"
