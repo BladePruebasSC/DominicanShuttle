@@ -16,14 +16,24 @@ export const bookings = pgTable("bookings", {
   customerPhone: text("customer_phone").notNull(),
   origin: text("origin").notNull(),
   destination: text("destination").notNull(),
+  originPlaceId: text("origin_place_id"),
+  destinationPlaceId: text("destination_place_id"),
+  originCoords: json("origin_coords").$type<{ lat: number; lng: number }>(),
+  destinationCoords: json("destination_coords").$type<{ lat: number; lng: number }>(),
   pickupDate: timestamp("pickup_date").notNull(),
   returnDate: timestamp("return_date"),
   passengers: integer("passengers").notNull(),
   vehicleType: text("vehicle_type").notNull(),
   serviceType: text("service_type").notNull(), // "one_way" | "round_trip"
   estimatedPrice: decimal("estimated_price", { precision: 10, scale: 2 }).notNull(),
+  finalPrice: decimal("final_price", { precision: 10, scale: 2 }),
   specialRequests: text("special_requests"),
-  status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "completed" | "cancelled"
+  status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "in_progress" | "completed" | "cancelled"
+  paymentStatus: text("payment_status").default("pending"), // "pending" | "paid" | "refunded" | "failed"
+  paymentMethod: text("payment_method"),
+  vehicleId: text("vehicle_id"),
+  driverId: text("driver_id"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -34,10 +44,16 @@ export const vehicles = pgTable("vehicles", {
   type: text("type").notNull(), // "sedan" | "suv" | "van" | "bus"
   capacity: integer("capacity").notNull(),
   luggageCapacity: integer("luggage_capacity").notNull(),
+  capacityText: text("capacity_text"),
+  luggageText: text("luggage_text"),
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
   features: json("features").$type<string[]>().notNull(),
   imageUrl: text("image_url"),
+  licensePlate: text("license_plate"),
+  year: integer("year"),
+  color: text("color"),
   available: boolean("available").default(true),
+  driverId: text("driver_id"),
 });
 
 export const tours = pgTable("tours", {
@@ -47,9 +63,16 @@ export const tours = pgTable("tours", {
   duration: text("duration").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   includes: json("includes").$type<string[]>().notNull(),
+  highlights: json("highlights").$type<string[]>(),
   imageUrl: text("image_url"),
-  category: text("category").notNull(), // "adventure" | "cultural" | "beach" | "nature"
+  category: text("category").notNull(), // "adventure" | "cultural" | "beach" | "nature" | "city"
   popular: boolean("popular").default(false),
+  rating: decimal("rating", { precision: 3, scale: 1 }),
+  reviews: integer("reviews"),
+  maxParticipants: integer("max_participants"),
+  minParticipants: integer("min_participants"),
+  difficultyLevel: text("difficulty_level"), // "easy" | "medium" | "hard"
+  isActive: boolean("is_active").default(true),
 });
 
 export const testimonials = pgTable("testimonials", {
@@ -60,6 +83,9 @@ export const testimonials = pgTable("testimonials", {
   review: text("review").notNull(),
   date: text("date").notNull(),
   verified: boolean("verified").default(true),
+  source: text("source"), // "Google" | "TripAdvisor" | "Facebook" | "Other"
+  bookingId: text("booking_id"),
+  isFeatured: boolean("is_featured").default(false),
 });
 
 export const contactMessages = pgTable("contact_messages", {
@@ -69,8 +95,25 @@ export const contactMessages = pgTable("contact_messages", {
   phone: text("phone"),
   serviceInterest: text("service_interest").notNull(),
   message: text("message").notNull(),
+  status: text("status").default("new"), // "new" | "contacted" | "resolved" | "closed"
+  priority: text("priority").default("normal"), // "low" | "normal" | "high" | "urgent"
+  assignedTo: text("assigned_to"),
+  response: text("response"),
   createdAt: timestamp("created_at").defaultNow(),
-  status: text("status").default("new"), // "new" | "contacted" | "resolved"
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const tourReviews = pgTable("tour_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tourId: text("tour_id").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  rating: integer("rating").notNull(),
+  reviewText: text("review_text").notNull(),
+  verified: boolean("verified").default(false),
+  source: text("source").default("website"), // "website" | "Google" | "TripAdvisor" | "Facebook"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Schemas
@@ -104,6 +147,12 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   id: true,
 });
 
+export const insertTourReviewSchema = createInsertSchema(tourReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -117,3 +166,5 @@ export type ContactMessage = typeof contactMessages.$inferSelect;
 export type InsertTour = z.infer<typeof insertTourSchema>;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type InsertTourReview = z.infer<typeof insertTourReviewSchema>;
+export type TourReview = typeof tourReviews.$inferSelect;

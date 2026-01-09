@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -17,25 +17,542 @@ import {
   MapPin,
   Phone,
   Star,
-  ExternalLink
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+  Mail,
+  MessageCircle,
+  Calendar,
+  Filter,
+  Search
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import AuthGate from '@/components/auth-gate';
-import type { Tour, Vehicle, Testimonial } from '@shared/schema';
+import type { Tour, Vehicle, Testimonial, Booking } from '@shared/schema';
 import { COMPANY_INFO } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
+// Componentes de formularios fuera del componente principal para evitar re-renders
+const TourForm = React.memo(({ 
+  tour, 
+  onSave, 
+  onCancel, 
+  isSaving 
+}: { 
+  tour?: Tour; 
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) => {
+  const lastTourIdRef = useRef<string | undefined>(tour?.id);
+  const [formData, setFormData] = useState(() => ({
+    name: tour?.name || '',
+    description: tour?.description || '',
+    duration: tour?.duration || '',
+    price: tour?.price || '',
+    includes: Array.isArray(tour?.includes) ? tour.includes.join(', ') : '',
+    imageUrl: tour?.imageUrl || '',
+    category: tour?.category || 'beach',
+    popular: tour?.popular || false,
+  }));
+
+  // Actualizar formData solo cuando cambie el ID del tour
+  useEffect(() => {
+    const currentTourId = tour?.id;
+    
+    if (lastTourIdRef.current !== currentTourId) {
+      lastTourIdRef.current = currentTourId;
+      
+      if (tour) {
+        setFormData({
+          name: tour.name || '',
+          description: tour.description || '',
+          duration: tour.duration || '',
+          price: tour.price || '',
+          includes: Array.isArray(tour.includes) ? tour.includes.join(', ') : '',
+          imageUrl: tour.imageUrl || '',
+          category: tour.category || 'beach',
+          popular: tour.popular || false,
+        });
+      } else {
+        setFormData({
+          name: '',
+          description: '',
+          duration: '',
+          price: '',
+          includes: '',
+          imageUrl: '',
+          category: 'beach',
+          popular: false,
+        });
+      }
+    }
+  }, [tour?.id]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = {
+      ...formData,
+      includes: formData.includes.split(',').map(i => i.trim()).filter(Boolean),
+      price: formData.price.toString(),
+    };
+    onSave(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Nombre del Tour</Label>
+          <Input
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Duración</Label>
+          <Input
+            value={formData.duration}
+            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+            placeholder="Ej: 8 horas"
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-gray-300">Descripción</Label>
+        <Textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={4}
+          className="bg-void/50 border-white/10 text-white"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Precio (USD)</Label>
+          <Input
+            type="number"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Categoría</Label>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger className="bg-void/50 border-white/10 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-void border-white/10">
+              <SelectItem value="beach" className="text-white">Playa</SelectItem>
+              <SelectItem value="adventure" className="text-white">Aventura</SelectItem>
+              <SelectItem value="cultural" className="text-white">Cultural</SelectItem>
+              <SelectItem value="nature" className="text-white">Naturaleza</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-gray-300">Incluye (separado por comas)</Label>
+        <Input
+          value={formData.includes}
+          onChange={(e) => setFormData({ ...formData, includes: e.target.value })}
+          placeholder="Transporte, Almuerzo, Guía..."
+          className="bg-void/50 border-white/10 text-white"
+        />
+      </div>
+      
+      <div>
+        <Label className="text-gray-300">URL de Imagen</Label>
+        <Input
+          value={formData.imageUrl}
+          onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+          placeholder="https://..."
+          className="bg-void/50 border-white/10 text-white"
+        />
+      </div>
+        
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={formData.popular}
+          onCheckedChange={(checked) => setFormData({ ...formData, popular: checked })}
+        />
+        <Label className="text-gray-300">Tour Popular</Label>
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isSaving} className="bg-coco-gold text-black hover:bg-coco-gold/90">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {tour ? 'Actualizar' : 'Crear'} Tour
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.tour?.id === nextProps.tour?.id && prevProps.isSaving === nextProps.isSaving;
+});
+
+const VehicleForm = React.memo(({ 
+  vehicle, 
+  onSave, 
+  onCancel, 
+  isSaving 
+}: { 
+  vehicle?: Vehicle; 
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) => {
+  const lastVehicleIdRef = useRef<string | undefined>(vehicle?.id);
+  const [formData, setFormData] = useState(() => ({
+    name: vehicle?.name || '',
+    type: vehicle?.type || 'sedan',
+    capacity: vehicle?.capacity || 3,
+    luggageCapacity: vehicle?.luggageCapacity || 2,
+    basePrice: vehicle?.basePrice || '',
+    features: Array.isArray(vehicle?.features) ? vehicle.features.join(', ') : '',
+    imageUrl: vehicle?.imageUrl || '',
+    available: vehicle?.available ?? true,
+  }));
+
+  useEffect(() => {
+    const currentVehicleId = vehicle?.id;
+    
+    if (lastVehicleIdRef.current !== currentVehicleId) {
+      lastVehicleIdRef.current = currentVehicleId;
+      
+      if (vehicle) {
+        setFormData({
+          name: vehicle.name || '',
+          type: vehicle.type || 'sedan',
+          capacity: vehicle.capacity || 3,
+          luggageCapacity: vehicle.luggageCapacity || 2,
+          basePrice: vehicle.basePrice || '',
+          features: Array.isArray(vehicle.features) ? vehicle.features.join(', ') : '',
+          imageUrl: vehicle.imageUrl || '',
+          available: vehicle.available ?? true,
+        });
+      } else {
+        setFormData({
+          name: '',
+          type: 'sedan',
+          capacity: 3,
+          luggageCapacity: 2,
+          basePrice: '',
+          features: '',
+          imageUrl: '',
+          available: true,
+        });
+      }
+    }
+  }, [vehicle?.id]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = {
+      ...formData,
+      features: formData.features.split(',').map(f => f.trim()).filter(Boolean),
+      basePrice: formData.basePrice.toString(),
+    };
+    onSave(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Nombre del Vehículo</Label>
+          <Input
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Tipo</Label>
+          <Select
+            value={formData.type}
+            onValueChange={(value) => setFormData({ ...formData, type: value })}
+          >
+            <SelectTrigger className="bg-void/50 border-white/10 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-void border-white/10">
+              <SelectItem value="sedan" className="text-white">Sedán</SelectItem>
+              <SelectItem value="suv" className="text-white">SUV</SelectItem>
+              <SelectItem value="van" className="text-white">Van</SelectItem>
+              <SelectItem value="bus" className="text-white">Autobús</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+        
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Capacidad (pasajeros)</Label>
+          <Input
+            type="number"
+            value={formData.capacity}
+            onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Capacidad de Equipaje</Label>
+          <Input
+            type="number"
+            value={formData.luggageCapacity}
+            onChange={(e) => setFormData({ ...formData, luggageCapacity: parseInt(e.target.value) })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+      </div>
+        
+      <div>
+        <Label className="text-gray-300">Precio Base (USD)</Label>
+        <Input
+          type="number"
+          value={formData.basePrice}
+          onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+          className="bg-void/50 border-white/10 text-white"
+          required
+        />
+      </div>
+        
+      <div>
+        <Label className="text-gray-300">Características (separado por comas)</Label>
+        <Input
+          value={formData.features}
+          onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+          placeholder="Aire acondicionado, WiFi, Agua gratis..."
+          className="bg-void/50 border-white/10 text-white"
+        />
+      </div>
+        
+      <div>
+        <Label className="text-gray-300">URL de Imagen</Label>
+        <Input
+          value={formData.imageUrl}
+          onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+          placeholder="https://..."
+          className="bg-void/50 border-white/10 text-white"
+        />
+      </div>
+        
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={formData.available}
+          onCheckedChange={(checked) => setFormData({ ...formData, available: checked })}
+        />
+        <Label className="text-gray-300">Disponible</Label>
+      </div>
+        
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isSaving} className="bg-coco-gold text-black hover:bg-coco-gold/90">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {vehicle ? 'Actualizar' : 'Crear'} Vehículo
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.vehicle?.id === nextProps.vehicle?.id && prevProps.isSaving === nextProps.isSaving;
+});
+
+const TestimonialForm = React.memo(({ 
+  testimonial, 
+  onSave, 
+  onCancel, 
+  isSaving 
+}: { 
+  testimonial?: Testimonial; 
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) => {
+  const lastTestimonialIdRef = useRef<string | undefined>(testimonial?.id);
+  const [formData, setFormData] = useState(() => ({
+    customerName: testimonial?.customerName || '',
+    customerInitials: testimonial?.customerInitials || '',
+    rating: testimonial?.rating || 5,
+    review: testimonial?.review || '',
+    date: testimonial?.date || new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+    verified: testimonial?.verified ?? true,
+  }));
+
+  useEffect(() => {
+    const currentTestimonialId = testimonial?.id;
+    
+    if (lastTestimonialIdRef.current !== currentTestimonialId) {
+      lastTestimonialIdRef.current = currentTestimonialId;
+      
+      if (testimonial) {
+        setFormData({
+          customerName: testimonial.customerName || '',
+          customerInitials: testimonial.customerInitials || '',
+          rating: testimonial.rating || 5,
+          review: testimonial.review || '',
+          date: testimonial.date || new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+          verified: testimonial.verified ?? true,
+        });
+      } else {
+        setFormData({
+          customerName: '',
+          customerInitials: '',
+          rating: 5,
+          review: '',
+          date: new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+          verified: true,
+        });
+      }
+    }
+  }, [testimonial?.id]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Nombre del Cliente</Label>
+          <Input
+            value={formData.customerName}
+            onChange={(e) => {
+              setFormData({ 
+                ...formData, 
+                customerName: e.target.value,
+                customerInitials: e.target.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+              });
+            }}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Iniciales</Label>
+          <Input
+            value={formData.customerInitials}
+            onChange={(e) => setFormData({ ...formData, customerInitials: e.target.value })}
+            maxLength={2}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-gray-300">Reseña</Label>
+        <Textarea
+          value={formData.review}
+          onChange={(e) => setFormData({ ...formData, review: e.target.value })}
+          rows={4}
+          className="bg-void/50 border-white/10 text-white"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-gray-300">Calificación (1-5)</Label>
+          <Input
+            type="number"
+            min="1"
+            max="5"
+            value={formData.rating}
+            onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) })}
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+        <div>
+          <Label className="text-gray-300">Fecha</Label>
+          <Input
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            placeholder="Ej: Agosto 2025"
+            className="bg-void/50 border-white/10 text-white"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={formData.verified}
+          onCheckedChange={(checked) => setFormData({ ...formData, verified: checked })}
+        />
+        <Label className="text-gray-300">Verificado</Label>
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isSaving} className="bg-coco-gold text-black hover:bg-coco-gold/90">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {testimonial ? 'Actualizar' : 'Crear'} Testimonio
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.testimonial?.id === nextProps.testimonial?.id && prevProps.isSaving === nextProps.isSaving;
+});
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('tours');
+  const [activeTab, setActiveTab] = useState('bookings');
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null);
   const [contactInfo, setContactInfo] = useState(COMPANY_INFO);
+  const [bookingFilters, setBookingFilters] = useState({
+    status: 'all',
+    dateFrom: '',
+    dateTo: '',
+    vehicleType: 'all',
+    search: '',
+  });
 
   // Queries
   const { data: tours = [], isLoading: toursLoading } = useQuery({
@@ -65,6 +582,15 @@ export default function AdminDashboard() {
     },
   });
 
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
+    queryKey: ['/api/bookings'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/bookings');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
   // Mutations
   const createTour = useMutation({
     mutationFn: (data: any) => apiRequest('POST', '/api/tours', data),
@@ -79,8 +605,11 @@ export default function AdminDashboard() {
   });
 
   const updateTour = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest('PUT', `/api/tours/${id}`, data),
-    onSuccess: () => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest('PUT', `/api/tours/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: async (updatedTour) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tours'] });
       toast({ title: 'Tour actualizado exitosamente' });
       setEditingTour(null);
@@ -114,8 +643,11 @@ export default function AdminDashboard() {
   });
 
   const updateVehicle = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest('PUT', `/api/vehicles/${id}`, data),
-    onSuccess: () => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest('PUT', `/api/vehicles/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: async (updatedVehicle) => {
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
       toast({ title: 'Vehículo actualizado exitosamente' });
       setEditingVehicle(null);
@@ -149,8 +681,11 @@ export default function AdminDashboard() {
   });
 
   const updateTestimonial = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest('PUT', `/api/testimonials/${id}`, data),
-    onSuccess: () => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest('PUT', `/api/testimonials/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: async (updatedTestimonial) => {
       queryClient.invalidateQueries({ queryKey: ['/api/testimonials'] });
       toast({ title: 'Testimonio actualizado exitosamente' });
       setEditingTestimonial(null);
@@ -171,389 +706,75 @@ export default function AdminDashboard() {
     },
   });
 
-  const TourForm = ({ tour }: { tour?: Tour }) => {
-    const [formData, setFormData] = useState({
-      name: tour?.name || '',
-      description: tour?.description || '',
-      duration: tour?.duration || '',
-      price: tour?.price || '',
-      includes: Array.isArray(tour?.includes) ? tour.includes.join(', ') : '',
-      imageUrl: tour?.imageUrl || '',
-      category: tour?.category || 'beach',
-      popular: tour?.popular || false,
-    });
+  const updateBookingStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => 
+      apiRequest('PATCH', `/api/bookings/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      toast({ title: 'Estado de reserva actualizado exitosamente' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'Error al actualizar estado de reserva' });
+    },
+  });
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      const data = {
-        ...formData,
-        includes: formData.includes.split(',').map(i => i.trim()).filter(Boolean),
-        price: formData.price.toString(),
-      };
+  // Callbacks estables para los formularios usando useRef para evitar re-renders
+  const editingTourRef = useRef(editingTour);
+  const editingVehicleRef = useRef(editingVehicle);
+  const editingTestimonialRef = useRef(editingTestimonial);
 
-      if (tour) {
-        updateTour.mutate({ id: tour.id, data });
-      } else {
-        createTour.mutate(data);
-      }
-    };
+  useEffect(() => {
+    editingTourRef.current = editingTour;
+  }, [editingTour]);
 
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Nombre del Tour</Label>
-            <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Duración</Label>
-            <Input
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-              placeholder="Ej: 8 horas"
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-        </div>
+  useEffect(() => {
+    editingVehicleRef.current = editingVehicle;
+  }, [editingVehicle]);
 
-        <div>
-          <Label className="text-gray-300">Descripción</Label>
-          <Textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={4}
-            className="bg-void/50 border-white/10 text-white"
-            required
-          />
-        </div>
+  useEffect(() => {
+    editingTestimonialRef.current = editingTestimonial;
+  }, [editingTestimonial]);
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Precio (USD)</Label>
-            <Input
-              type="number"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Categoría</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
-            >
-              <SelectTrigger className="bg-void/50 border-white/10 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-void border-white/10">
-                <SelectItem value="beach" className="text-white">Playa</SelectItem>
-                <SelectItem value="adventure" className="text-white">Aventura</SelectItem>
-                <SelectItem value="cultural" className="text-white">Cultural</SelectItem>
-                <SelectItem value="nature" className="text-white">Naturaleza</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+  const handleTourSave = useCallback((data: any) => {
+    const currentTour = editingTourRef.current;
+    if (currentTour) {
+      updateTour.mutate({ id: currentTour.id, data });
+    } else {
+      createTour.mutate(data);
+    }
+  }, [updateTour, createTour]);
 
-        <div>
-          <Label className="text-gray-300">Incluye (separado por comas)</Label>
-          <Input
-            value={formData.includes}
-            onChange={(e) => setFormData({ ...formData, includes: e.target.value })}
-            placeholder="Transporte, Almuerzo, Guía..."
-            className="bg-void/50 border-white/10 text-white"
-          />
-        </div>
-        
-        <div>
-          <Label className="text-gray-300">URL de Imagen</Label>
-          <Input
-            value={formData.imageUrl}
-            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-            placeholder="https://..."
-            className="bg-void/50 border-white/10 text-white"
-              />
-            </div>
-            
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.popular}
-            onCheckedChange={(checked) => setFormData({ ...formData, popular: checked })}
-          />
-          <Label className="text-gray-300">Tour Popular</Label>
-        </div>
+  const handleTourCancel = useCallback(() => {
+    setEditingTour(null);
+  }, []);
 
-        <div className="flex gap-2">
-          <Button type="submit" disabled={createTour.isPending || updateTour.isPending} className="bg-coco-gold text-black hover:bg-coco-gold/90">
-            {createTour.isPending || updateTour.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {tour ? 'Actualizar' : 'Crear'} Tour
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setEditingTour(null)} className="border-white/20 text-white hover:bg-white/10">
-            Cancelar
-          </Button>
-        </div>
-      </form>
-    );
-  };
+  const handleVehicleSave = useCallback((data: any) => {
+    const currentVehicle = editingVehicleRef.current;
+    if (currentVehicle) {
+      updateVehicle.mutate({ id: currentVehicle.id, data });
+    } else {
+      createVehicle.mutate(data);
+    }
+  }, [updateVehicle, createVehicle]);
 
-  const VehicleForm = ({ vehicle }: { vehicle?: Vehicle }) => {
-    const [formData, setFormData] = useState({
-      name: vehicle?.name || '',
-      type: vehicle?.type || 'sedan',
-      capacity: vehicle?.capacity || 3,
-      luggageCapacity: vehicle?.luggageCapacity || 2,
-      basePrice: vehicle?.basePrice || '',
-      features: Array.isArray(vehicle?.features) ? vehicle.features.join(', ') : '',
-      imageUrl: vehicle?.imageUrl || '',
-      available: vehicle?.available ?? true,
-    });
+  const handleVehicleCancel = useCallback(() => {
+    setEditingVehicle(null);
+  }, []);
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      const data = {
-        ...formData,
-        features: formData.features.split(',').map(f => f.trim()).filter(Boolean),
-        basePrice: formData.basePrice.toString(),
-      };
+  const handleTestimonialSave = useCallback((data: any) => {
+    const currentTestimonial = editingTestimonialRef.current;
+    if (currentTestimonial) {
+      updateTestimonial.mutate({ id: currentTestimonial.id, data });
+    } else {
+      createTestimonial.mutate(data);
+    }
+  }, [updateTestimonial, createTestimonial]);
 
-      if (vehicle) {
-        updateVehicle.mutate({ id: vehicle.id, data });
-      } else {
-        createVehicle.mutate(data);
-      }
-    };
+  const handleTestimonialCancel = useCallback(() => {
+    setEditingTestimonial(null);
+  }, []);
 
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Nombre del Vehículo</Label>
-                <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Tipo</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) => setFormData({ ...formData, type: value })}
-            >
-              <SelectTrigger className="bg-void/50 border-white/10 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-void border-white/10">
-                <SelectItem value="sedan" className="text-white">Sedán</SelectItem>
-                <SelectItem value="suv" className="text-white">SUV</SelectItem>
-                <SelectItem value="van" className="text-white">Van</SelectItem>
-                <SelectItem value="bus" className="text-white">Autobús</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-              </div>
-              
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Capacidad (pasajeros)</Label>
-            <Input
-              type="number"
-              value={formData.capacity}
-              onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Capacidad de Equipaje</Label>
-                <Input
-                  type="number"
-              value={formData.luggageCapacity}
-              onChange={(e) => setFormData({ ...formData, luggageCapacity: parseInt(e.target.value) })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-                />
-              </div>
-            </div>
-            
-        <div>
-          <Label className="text-gray-300">Precio Base (USD)</Label>
-          <Input
-            type="number"
-            value={formData.basePrice}
-            onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-            className="bg-void/50 border-white/10 text-white"
-            required
-              />
-            </div>
-            
-        <div>
-          <Label className="text-gray-300">Características (separado por comas)</Label>
-                    <Input
-            value={formData.features}
-            onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-            placeholder="Aire acondicionado, WiFi, Agua gratis..."
-            className="bg-void/50 border-white/10 text-white"
-                    />
-                  </div>
-                  
-        <div>
-          <Label className="text-gray-300">URL de Imagen</Label>
-                    <Input
-            value={formData.imageUrl}
-            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-            placeholder="https://..."
-            className="bg-void/50 border-white/10 text-white"
-                    />
-                  </div>
-            
-            <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.available}
-            onCheckedChange={(checked) => setFormData({ ...formData, available: checked })}
-          />
-          <Label className="text-gray-300">Disponible</Label>
-            </div>
-            
-            <div className="flex gap-2">
-          <Button type="submit" disabled={createVehicle.isPending || updateVehicle.isPending} className="bg-coco-gold text-black hover:bg-coco-gold/90">
-            {createVehicle.isPending || updateVehicle.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {vehicle ? 'Actualizar' : 'Crear'} Vehículo
-              </Button>
-          <Button type="button" variant="outline" onClick={() => setEditingVehicle(null)} className="border-white/20 text-white hover:bg-white/10">
-                Cancelar
-              </Button>
-            </div>
-      </form>
-    );
-  };
-
-  const TestimonialForm = ({ testimonial }: { testimonial?: Testimonial }) => {
-    const [formData, setFormData] = useState({
-      customerName: testimonial?.customerName || '',
-      customerInitials: testimonial?.customerInitials || '',
-      rating: testimonial?.rating || 5,
-      review: testimonial?.review || '',
-      date: testimonial?.date || new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
-      verified: testimonial?.verified ?? true,
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (testimonial) {
-        updateTestimonial.mutate({ id: testimonial.id, data: formData });
-      } else {
-        createTestimonial.mutate(formData);
-      }
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Nombre del Cliente</Label>
-            <Input
-              value={formData.customerName}
-              onChange={(e) => {
-                setFormData({ 
-                  ...formData, 
-                  customerName: e.target.value,
-                  customerInitials: e.target.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                });
-              }}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Iniciales</Label>
-            <Input
-              value={formData.customerInitials}
-              onChange={(e) => setFormData({ ...formData, customerInitials: e.target.value })}
-              maxLength={2}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label className="text-gray-300">Reseña</Label>
-          <Textarea
-            value={formData.review}
-            onChange={(e) => setFormData({ ...formData, review: e.target.value })}
-            rows={4}
-            className="bg-void/50 border-white/10 text-white"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-300">Calificación (1-5)</Label>
-            <Input
-              type="number"
-              min="1"
-              max="5"
-              value={formData.rating}
-              onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) })}
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Fecha</Label>
-            <Input
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              placeholder="Ej: Agosto 2025"
-              className="bg-void/50 border-white/10 text-white"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.verified}
-            onCheckedChange={(checked) => setFormData({ ...formData, verified: checked })}
-          />
-          <Label className="text-gray-300">Verificado</Label>
-        </div>
-
-        <div className="flex gap-2">
-          <Button type="submit" disabled={createTestimonial.isPending || updateTestimonial.isPending} className="bg-coco-gold text-black hover:bg-coco-gold/90">
-            {createTestimonial.isPending || updateTestimonial.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {testimonial ? 'Actualizar' : 'Crear'} Testimonio
-                  </Button>
-          <Button type="button" variant="outline" onClick={() => setEditingTestimonial(null)} className="border-white/20 text-white hover:bg-white/10">
-            Cancelar
-                  </Button>
-                </div>
-      </form>
-    );
-  };
+  // Usar los formularios que están definidos fuera del componente
 
   return (
     <AuthGate>
@@ -565,7 +786,11 @@ export default function AdminDashboard() {
           </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 bg-glass-dark border-white/10">
+            <TabsList className="grid w-full grid-cols-6 bg-glass-dark border-white/10">
+              <TabsTrigger value="bookings" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
+                <Calendar className="h-4 w-4" />
+                Reservas
+              </TabsTrigger>
               <TabsTrigger value="tours" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
                 <MapPin className="h-4 w-4" />
               Tours
@@ -588,6 +813,327 @@ export default function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
 
+            {/* Bookings Tab */}
+            <TabsContent value="bookings" className="space-y-6">
+              <Card className="glass-panel border-white/10">
+                <CardHeader>
+                  <div className="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                      <CardTitle className="text-white">Gestión de Reservas</CardTitle>
+                      <CardDescription className="text-gray-400">Gestiona y comunícate con los clientes</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Filtros */}
+                  <div className="mb-6 p-4 bg-void/50 rounded-lg border border-white/10 space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Filter className="h-4 w-4 text-coco-gold" />
+                      <h3 className="text-white font-semibold">Filtros</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div>
+                        <Label className="text-gray-300 text-xs">Buscar</Label>
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Nombre, email..."
+                            value={bookingFilters.search}
+                            onChange={(e) => setBookingFilters({ ...bookingFilters, search: e.target.value })}
+                            className="bg-void/50 border-white/10 text-white pl-8"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-xs">Estado</Label>
+                        <Select
+                          value={bookingFilters.status}
+                          onValueChange={(value) => setBookingFilters({ ...bookingFilters, status: value })}
+                        >
+                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-void border-white/10">
+                            <SelectItem value="all" className="text-white">Todos</SelectItem>
+                            <SelectItem value="pending" className="text-white">Pendiente</SelectItem>
+                            <SelectItem value="confirmed" className="text-white">Confirmado</SelectItem>
+                            <SelectItem value="in_progress" className="text-white">En Progreso</SelectItem>
+                            <SelectItem value="completed" className="text-white">Completado</SelectItem>
+                            <SelectItem value="cancelled" className="text-white">Cancelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-xs">Tipo de Vehículo</Label>
+                        <Select
+                          value={bookingFilters.vehicleType}
+                          onValueChange={(value) => setBookingFilters({ ...bookingFilters, vehicleType: value })}
+                        >
+                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-void border-white/10">
+                            <SelectItem value="all" className="text-white">Todos</SelectItem>
+                            <SelectItem value="sedan" className="text-white">Sedán</SelectItem>
+                            <SelectItem value="suv" className="text-white">SUV</SelectItem>
+                            <SelectItem value="van" className="text-white">Van</SelectItem>
+                            <SelectItem value="bus" className="text-white">Autobús</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-xs">Desde</Label>
+                        <Input
+                          type="date"
+                          value={bookingFilters.dateFrom}
+                          onChange={(e) => setBookingFilters({ ...bookingFilters, dateFrom: e.target.value })}
+                          className="bg-void/50 border-white/10 text-white"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-xs">Hasta</Label>
+                        <Input
+                          type="date"
+                          value={bookingFilters.dateTo}
+                          onChange={(e) => setBookingFilters({ ...bookingFilters, dateTo: e.target.value })}
+                          className="bg-void/50 border-white/10 text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lista de Reservas */}
+                  {bookingsLoading ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" />
+                    </div>
+                  ) : (() => {
+                    // Filtrar reservas
+                    let filteredBookings = bookings as Booking[];
+                    
+                    if (bookingFilters.status !== 'all') {
+                      filteredBookings = filteredBookings.filter(b => b.status === bookingFilters.status);
+                    }
+                    
+                    if (bookingFilters.vehicleType !== 'all') {
+                      filteredBookings = filteredBookings.filter(b => b.vehicleType === bookingFilters.vehicleType);
+                    }
+                    
+                    if (bookingFilters.search) {
+                      const searchLower = bookingFilters.search.toLowerCase();
+                      filteredBookings = filteredBookings.filter(b => 
+                        b.customerName.toLowerCase().includes(searchLower) ||
+                        b.customerEmail.toLowerCase().includes(searchLower) ||
+                        b.customerPhone.includes(searchLower) ||
+                        b.origin.toLowerCase().includes(searchLower) ||
+                        b.destination.toLowerCase().includes(searchLower)
+                      );
+                    }
+                    
+                    if (bookingFilters.dateFrom) {
+                      filteredBookings = filteredBookings.filter(b => {
+                        const pickupDate = new Date(b.pickupDate);
+                        const filterDate = new Date(bookingFilters.dateFrom);
+                        return pickupDate >= filterDate;
+                      });
+                    }
+                    
+                    if (bookingFilters.dateTo) {
+                      filteredBookings = filteredBookings.filter(b => {
+                        const pickupDate = new Date(b.pickupDate);
+                        const filterDate = new Date(bookingFilters.dateTo);
+                        filterDate.setHours(23, 59, 59);
+                        return pickupDate <= filterDate;
+                      });
+                    }
+
+                    // Ordenar por fecha de recogida (más recientes primero)
+                    filteredBookings.sort((a, b) => 
+                      new Date(b.pickupDate).getTime() - new Date(a.pickupDate).getTime()
+                    );
+
+                    return filteredBookings.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <p>No hay reservas que coincidan con los filtros.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredBookings.map((booking) => {
+                          const getStatusBadge = (status: string) => {
+                            const statusMap: Record<string, { label: string; className: string }> = {
+                              pending: { label: 'Pendiente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
+                              confirmed: { label: 'Confirmado', className: 'bg-green-500/20 text-green-500 border-green-500/30' },
+                              in_progress: { label: 'En Progreso', className: 'bg-blue-500/20 text-blue-500 border-blue-500/30' },
+                              completed: { label: 'Completado', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+                              cancelled: { label: 'Cancelado', className: 'bg-red-500/20 text-red-500 border-red-500/30' },
+                            };
+                            const statusInfo = statusMap[status] || statusMap.pending;
+                            return (
+                              <Badge className={statusInfo.className}>
+                                {statusInfo.label}
+                              </Badge>
+                            );
+                          };
+
+                          const formatDate = (dateString: string) => {
+                            const date = new Date(dateString);
+                            return date.toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                          };
+
+                          const openWhatsApp = (phone: string, booking: Booking) => {
+                            const message = encodeURIComponent(
+                              `Hola ${booking.customerName}, te contactamos sobre tu reserva del ${formatDate(booking.pickupDate)}. ` +
+                              `Origen: ${booking.origin} - Destino: ${booking.destination}. ` +
+                              `¿Podemos confirmar los detalles?`
+                            );
+                            const whatsappNumber = phone.replace(/[^0-9]/g, '');
+                            window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+                          };
+
+                          const openEmail = (email: string, booking: Booking) => {
+                            const subject = encodeURIComponent(`Confirmación de Reserva - ${booking.customerName}`);
+                            const body = encodeURIComponent(
+                              `Hola ${booking.customerName},\n\n` +
+                              `Te contactamos sobre tu reserva:\n\n` +
+                              `Fecha de recogida: ${formatDate(booking.pickupDate)}\n` +
+                              `Origen: ${booking.origin}\n` +
+                              `Destino: ${booking.destination}\n` +
+                              `Pasajeros: ${booking.passengers}\n` +
+                              `Tipo de vehículo: ${booking.vehicleType}\n` +
+                              `Precio estimado: $${booking.estimatedPrice} USD\n\n` +
+                              `Por favor confirma si estos detalles son correctos.\n\n` +
+                              `Saludos,\nDominican Transport Pro`
+                            );
+                            window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+                          };
+
+                          return (
+                            <Card key={booking.id} className="border-white/10 bg-glass-dark">
+                              <CardContent className="p-6">
+                                <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                      <h3 className="font-semibold text-white text-lg">{booking.customerName}</h3>
+                                      {getStatusBadge(booking.status)}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-400">
+                                      <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4" />
+                                        <span>{booking.customerEmail}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="h-4 w-4" />
+                                        <span>{booking.customerPhone}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>{booking.origin} → {booking.destination}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>{formatDate(booking.pickupDate)}</span>
+                                      </div>
+                                    </div>
+                                    {booking.returnDate && (
+                                      <div className="text-sm text-gray-400 mt-2">
+                                        <span className="font-semibold">Regreso:</span> {formatDate(booking.returnDate)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col gap-2">
+                                    <div className="text-right">
+                                      <div className="text-coco-gold font-bold text-lg">${booking.estimatedPrice} USD</div>
+                                      <div className="text-xs text-gray-400">
+                                        {booking.passengers} pax • {booking.vehicleType} • {booking.serviceType === 'one_way' ? 'Solo ida' : 'Ida y vuelta'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {booking.specialRequests && (
+                                  <div className="mb-4 p-3 bg-void/50 rounded border border-white/10">
+                                    <p className="text-sm text-gray-300">
+                                      <span className="font-semibold text-white">Solicitudes especiales:</span> {booking.specialRequests}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
+                                  {booking.status === 'pending' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'confirmed' })}
+                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Aceptar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'cancelled' })}
+                                        className="border-red-500 text-red-500 hover:bg-red-500/10"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Rechazar
+                                      </Button>
+                                    </>
+                                  )}
+                                  {booking.status === 'confirmed' && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'in_progress' })}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      Marcar en Progreso
+                                    </Button>
+                                  )}
+                                  {booking.status === 'in_progress' && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'completed' })}
+                                      className="bg-gray-600 hover:bg-gray-700 text-white"
+                                    >
+                                      Marcar Completado
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openWhatsApp(booking.customerPhone, booking)}
+                                    className="border-green-500 text-green-500 hover:bg-green-500/10"
+                                  >
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    WhatsApp
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openEmail(booking.customerEmail, booking)}
+                                    className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                                  >
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    Email
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Tours Tab */}
           <TabsContent value="tours" className="space-y-6">
               <Card className="glass-panel border-white/10">
@@ -605,7 +1151,13 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                   {editingTour !== null ? (
-                    <TourForm tour={editingTour} />
+                    <TourForm 
+                      key={editingTour?.id || "new"} 
+                      tour={editingTour || undefined} 
+                      onSave={handleTourSave}
+                      onCancel={handleTourCancel}
+                      isSaving={createTour.isPending || updateTour.isPending}
+                    />
                   ) : (
                     <div className="space-y-4">
                       {toursLoading ? (
@@ -682,7 +1234,13 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                   {editingVehicle !== null ? (
-                    <VehicleForm vehicle={editingVehicle} />
+                    <VehicleForm 
+                      key={editingVehicle?.id || "new"} 
+                      vehicle={editingVehicle || undefined} 
+                      onSave={handleVehicleSave}
+                      onCancel={handleVehicleCancel}
+                      isSaving={createVehicle.isPending || updateVehicle.isPending}
+                    />
                   ) : (
                     <div className="space-y-4">
                       {vehiclesLoading ? (
@@ -760,7 +1318,13 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   {editingTestimonial !== null ? (
-                    <TestimonialForm testimonial={editingTestimonial} />
+                    <TestimonialForm 
+                      key={editingTestimonial?.id || "new"} 
+                      testimonial={editingTestimonial || undefined} 
+                      onSave={handleTestimonialSave}
+                      onCancel={handleTestimonialCancel}
+                      isSaving={createTestimonial.isPending || updateTestimonial.isPending}
+                    />
                   ) : (
                     <div className="space-y-4">
                       {testimonialsLoading ? (

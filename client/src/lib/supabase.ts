@@ -110,6 +110,10 @@ export interface Database {
           customer_phone: string;
           origin: string;
           destination: string;
+          origin_place_id: string | null;
+          destination_place_id: string | null;
+          origin_coords: { lat: number; lng: number } | null;
+          destination_coords: { lat: number; lng: number } | null;
           pickup_date: string;
           return_date: string | null;
           passengers: number;
@@ -134,6 +138,10 @@ export interface Database {
           customer_phone: string;
           origin: string;
           destination: string;
+          origin_place_id?: string | null;
+          destination_place_id?: string | null;
+          origin_coords?: { lat: number; lng: number } | null;
+          destination_coords?: { lat: number; lng: number } | null;
           pickup_date: string;
           return_date?: string | null;
           passengers: number;
@@ -158,6 +166,10 @@ export interface Database {
           customer_phone?: string;
           origin?: string;
           destination?: string;
+          origin_place_id?: string | null;
+          destination_place_id?: string | null;
+          origin_coords?: { lat: number; lng: number } | null;
+          destination_coords?: { lat: number; lng: number } | null;
           pickup_date?: string;
           return_date?: string | null;
           passengers?: number;
@@ -184,9 +196,12 @@ export interface Database {
           duration: string;
           price: number;
           includes: string[];
+          highlights: string[] | null;
           image_url: string | null;
           category: 'adventure' | 'cultural' | 'beach' | 'nature' | 'city';
           popular: boolean;
+          rating: number | null;
+          reviews: number | null;
           max_participants: number | null;
           min_participants: number;
           difficulty_level: 'easy' | 'medium' | 'hard' | null;
@@ -201,9 +216,12 @@ export interface Database {
           duration: string;
           price: number;
           includes?: string[];
+          highlights?: string[] | null;
           image_url?: string | null;
           category: 'adventure' | 'cultural' | 'beach' | 'nature' | 'city';
           popular?: boolean;
+          rating?: number | null;
+          reviews?: number | null;
           max_participants?: number | null;
           min_participants?: number;
           difficulty_level?: 'easy' | 'medium' | 'hard' | null;
@@ -218,9 +236,12 @@ export interface Database {
           duration?: string;
           price?: number;
           includes?: string[];
+          highlights?: string[] | null;
           image_url?: string | null;
           category?: 'adventure' | 'cultural' | 'beach' | 'nature' | 'city';
           popular?: boolean;
+          rating?: number | null;
+          reviews?: number | null;
           max_participants?: number | null;
           min_participants?: number;
           difficulty_level?: 'easy' | 'medium' | 'hard' | null;
@@ -238,6 +259,7 @@ export interface Database {
           review: string;
           date: string;
           verified: boolean;
+          source: 'Google' | 'TripAdvisor' | 'Facebook' | 'Other' | null;
           booking_id: string | null;
           is_featured: boolean;
           created_at: string;
@@ -251,6 +273,7 @@ export interface Database {
           review: string;
           date: string;
           verified?: boolean;
+          source?: 'Google' | 'TripAdvisor' | 'Facebook' | 'Other' | null;
           booking_id?: string | null;
           is_featured?: boolean;
           created_at?: string;
@@ -264,6 +287,7 @@ export interface Database {
           review?: string;
           date?: string;
           verified?: boolean;
+          source?: 'Google' | 'TripAdvisor' | 'Facebook' | 'Other' | null;
           booking_id?: string | null;
           is_featured?: boolean;
           created_at?: string;

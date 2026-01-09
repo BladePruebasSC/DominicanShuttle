@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Star, MapPin, Camera, Utensils, Check } from "lucide-react";
+import { Clock, Users, Star, MapPin, Camera, Utensils, Check, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import type { Tour } from "@shared/schema";
 
 const tourCategories = [
   { value: "all", label: "Todos los Tours" },
@@ -12,7 +15,8 @@ const tourCategories = [
   { value: "nature", label: "Naturaleza" },
 ];
 
-const tours = [
+// Datos de ejemplo para cuando no hay tours
+const exampleTours = [
   {
     id: 1,
     name: "Isla Saona Paradise",
@@ -180,9 +184,38 @@ const tours = [
 export default function Tours() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
+  // Obtener tours desde la API
+  const { data: toursData = [], isLoading, error } = useQuery({
+    queryKey: ['/api/tours'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/tours');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  // Mapear los tours de la API al formato esperado
+  const mappedTours = Array.isArray(toursData) 
+    ? toursData.map((tour: Tour) => ({
+        id: tour.id,
+        name: tour.name || '',
+        description: tour.description || '',
+        image: tour.imageUrl || 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600',
+        duration: tour.duration || '',
+        price: typeof tour.price === 'string' ? parseFloat(tour.price) : (tour.price || 0),
+        rating: tour.rating ? (typeof tour.rating === 'string' ? parseFloat(tour.rating) : tour.rating) : 4.5,
+        reviews: tour.reviews || 0,
+        category: tour.category || 'beach',
+        maxPeople: tour.maxParticipants || 50,
+        includes: Array.isArray(tour.includes) ? tour.includes : [],
+        highlights: Array.isArray(tour.highlights) ? tour.highlights : [],
+        popular: tour.popular || false,
+      }))
+    : [];
+
   const filteredTours = selectedCategory === "all" 
-    ? tours 
-    : tours.filter(tour => tour.category === selectedCategory);
+    ? mappedTours 
+    : mappedTours.filter(tour => tour.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-void pt-24 pb-16 px-4">
@@ -222,7 +255,23 @@ export default function Tours() {
 
         {/* Tours Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
-          {filteredTours.map((tour) => (
+          {isLoading ? (
+            <div className="col-span-full text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold mb-4" />
+              <p className="text-gray-400">Cargando tours...</p>
+            </div>
+          ) : error ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-red-400 mb-4">Error al cargar los tours</p>
+              <p className="text-gray-400 text-sm">Por favor, intenta recargar la página</p>
+            </div>
+          ) : filteredTours.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-400 mb-4">No hay tours disponibles en este momento</p>
+              <p className="text-gray-500 text-sm">Vuelve pronto para ver nuestros tours</p>
+            </div>
+          ) : (
+            filteredTours.map((tour) => (
             <Card 
               key={tour.id} 
               className="overflow-hidden hover:shadow-xl transition-all duration-300 border-white/10 bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 group" 
@@ -230,7 +279,7 @@ export default function Tours() {
             >
               <div className="aspect-video overflow-hidden relative">
                 <img 
-                  src={tour.image} 
+                  src={tour.image || 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600'} 
                   alt={tour.name}
                   className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition duration-700"
                 />
@@ -264,10 +313,12 @@ export default function Tours() {
                     <Clock className="w-4 h-4 mr-1 text-coco-gold" />
                     <span>{tour.duration}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-1 text-coco-gold" />
-                    <span>Máx. {tour.maxPeople} personas</span>
-                  </div>
+                  {tour.maxPeople && (
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 mr-1 text-coco-gold" />
+                      <span>Máx. {tour.maxPeople} personas</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -309,7 +360,8 @@ export default function Tours() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Info Section */}
