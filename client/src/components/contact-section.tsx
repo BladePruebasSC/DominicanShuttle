@@ -7,8 +7,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Mail, MessageSquare, MapPin, Send, Check } from "lucide-react";
-import { CONTACT_SERVICES, COMPANY_INFO } from "@/lib/constants";
+import { Send, Check } from "lucide-react";
+import { CONTACT_SERVICES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -53,36 +53,6 @@ export default function ContactSection() {
   const onSubmit = (data: InsertContactMessage) => {
     contactMutation.mutate(data);
   };
-
-  const contactInfo = [
-    {
-      icon: Phone,
-      title: "Teléfono",
-      value: COMPANY_INFO.phone,
-      detail: "Disponible 24/7",
-      href: `tel:${COMPANY_INFO.phone}`,
-    },
-    {
-      icon: Mail,
-      title: "Email",
-      value: COMPANY_INFO.email,
-      detail: "Respuesta en 2 horas",
-      href: `mailto:${COMPANY_INFO.email}`,
-    },
-    {
-      icon: MessageSquare,
-      title: "WhatsApp",
-      value: COMPANY_INFO.phone,
-      detail: "Respuesta inmediata",
-      href: `https://wa.me/${COMPANY_INFO.whatsapp}`,
-    },
-    {
-      icon: MapPin,
-      title: "Cobertura",
-      value: "Toda República Dominicana",
-      detail: COMPANY_INFO.coverage.join(", "),
-    },
-  ];
 
   const benefits = [
     "5+ años de experiencia",
@@ -249,46 +219,8 @@ export default function ContactSection() {
             </CardContent>
           </Card>
 
-          {/* Contact Info */}
+          {/* Benefits (evitamos duplicar la info de contacto, ya existe arriba en la página /contact) */}
           <div className="space-y-8">
-            <Card className="shadow-lg glass-panel border-white/10">
-              <CardHeader className="border-b border-white/10">
-                <CardTitle className="text-2xl text-white font-serif">
-                  Información de Contacto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 bg-transparent">
-                {contactInfo.map((info, index) => {
-                  const IconComponent = info.icon;
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start"
-                      data-testid={`contact-info-${index}`}
-                    >
-                      <div className="border border-coco-gold/30 bg-void/50 w-12 h-12 rounded-lg flex items-center justify-center mr-4">
-                        <IconComponent className="w-6 h-6 text-coco-gold" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-white">{info.title}</h4>
-                        {info.href ? (
-                          <a
-                            href={info.href}
-                            className="text-coco-gold hover:text-coco-gold/80 transition"
-                          >
-                            {info.value}
-                          </a>
-                        ) : (
-                          <p className="text-gray-300">{info.value}</p>
-                        )}
-                        <p className="text-sm text-gray-500">{info.detail}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
             <Card className="shadow-lg glass-panel border-white/10">
               <CardHeader className="border-b border-white/10">
                 <CardTitle className="text-xl text-white font-serif">
