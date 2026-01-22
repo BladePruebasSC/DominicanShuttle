@@ -448,69 +448,71 @@ export default function Booking() {
                                   Pick-up time * <span className="text-gray-500 text-[10px] normal-case">(24-hour format)</span>
                                 </FormLabel>
                                 <FormControl>
-                                  <div className="flex flex-wrap gap-2 mb-2">
-                                    {quickTimes.map((t) => {
-                                      const [h, m] = t.split(":");
-                                      const isActive = `${hours}:${minutes}` === t;
-                                      return (
-                                        <Button
-                                          key={t}
-                                          type="button"
-                                          variant="outline"
-                                          onClick={() => handleTimeChange(h, m)}
-                                          className={
-                                            isActive
-                                              ? "bg-coco-gold/20 text-coco-gold border border-coco-gold/30 hover:bg-coco-gold/30"
-                                              : "bg-void/50 border-white/10 text-white hover:bg-white/5"
-                                          }
-                                        >
-                                          {t}
-                                        </Button>
-                                      );
-                                    })}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Select
-                                      value={hours}
-                                      onValueChange={(value) => handleTimeChange(value, minutes)}
-                                    >
-                                      <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
-                                        <SelectValue placeholder="HH" />
-                                      </SelectTrigger>
-                                      <SelectContent className="bg-void border-white/10 max-h-[200px]">
-                                        {hourOptions.map((hour) => (
-                                          <SelectItem 
-                                            key={hour} 
-                                            value={hour}
-                                            className="text-white hover:bg-coco-gold/20"
+                                  <div>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {quickTimes.map((t) => {
+                                        const [h, m] = t.split(":");
+                                        const isActive = `${hours}:${minutes}` === t;
+                                        return (
+                                          <Button
+                                            key={t}
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => handleTimeChange(h, m)}
+                                            className={
+                                              isActive
+                                                ? "bg-coco-gold/20 text-coco-gold border border-coco-gold/30 hover:bg-coco-gold/30"
+                                                : "bg-void/50 border-white/10 text-white hover:bg-white/5"
+                                            }
                                           >
-                                            {hour}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    
-                                    <span className="text-white text-lg font-bold">:</span>
-                                    
-                                    <Select
-                                      value={minutes}
-                                      onValueChange={(value) => handleTimeChange(hours, value)}
-                                    >
-                                      <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
-                                        <SelectValue placeholder="MM" />
-                                      </SelectTrigger>
-                                      <SelectContent className="bg-void border-white/10">
-                                        {minuteOptions.map((minute) => (
-                                          <SelectItem 
-                                            key={minute} 
-                                            value={minute}
-                                            className="text-white hover:bg-coco-gold/20"
-                                          >
-                                            {minute}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                            {t}
+                                          </Button>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Select
+                                        value={hours}
+                                        onValueChange={(value) => handleTimeChange(value, minutes)}
+                                      >
+                                        <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                          <SelectValue placeholder="HH" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-void border-white/10 max-h-[200px]">
+                                          {hourOptions.map((hour) => (
+                                            <SelectItem
+                                              key={hour}
+                                              value={hour}
+                                              className="text-white hover:bg-coco-gold/20"
+                                            >
+                                              {hour}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+
+                                      <span className="text-white text-lg font-bold">:</span>
+
+                                      <Select
+                                        value={minutes}
+                                        onValueChange={(value) => handleTimeChange(hours, value)}
+                                      >
+                                        <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                          <SelectValue placeholder="MM" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-void border-white/10">
+                                          {minuteOptions.map((minute) => (
+                                            <SelectItem
+                                              key={minute}
+                                              value={minute}
+                                              className="text-white hover:bg-coco-gold/20"
+                                            >
+                                              {minute}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
                                   </div>
                                 </FormControl>
                                 <FormMessage />

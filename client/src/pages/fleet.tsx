@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Luggage, Check, Wifi, Snowflake, Music, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { dataSource } from "@/lib/data-source";
 
 export default function Fleet() {
   const { data: vehicles, isLoading } = useQuery({
-    queryKey: ["/api/vehicles"],
+    queryKey: ["vehicles"],
+    queryFn: () => dataSource.listVehicles(),
   });
 
   const fleetCategories = [
