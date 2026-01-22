@@ -22,6 +22,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { dataSource } from "@/lib/data-source";
 
 export default function Booking() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -90,7 +91,7 @@ export default function Booking() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
-      return await apiRequest("POST", "/api/bookings", data);
+      return await dataSource.createTransportBooking(data);
     },
     onSuccess: () => {
       setCurrentStep(4);
@@ -98,7 +99,7 @@ export default function Booking() {
         title: "¡Reserva confirmada!",
         description: "Te contactaremos pronto para confirmar los detalles.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["transportBookings"] });
     },
     onError: (error) => {
       toast({

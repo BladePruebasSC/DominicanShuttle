@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Star, MapPin, Camera, Utensils, Check, Loader2 } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import type { Tour } from "@shared/schema";
+import { TourBookingDialog } from "@/components/tour-booking-dialog";
 
 const tourCategories = [
   { value: "all", label: "Todos los Tours" },
@@ -183,6 +184,8 @@ const exampleTours = [
 
 export default function Tours() {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
 
   // Obtener tours (Supabase en prod / fallback a /api en dev)
   const { data: toursData = [], isLoading, error } = useQuery({
@@ -209,9 +212,11 @@ export default function Tours() {
       }))
     : [];
 
-  const filteredTours = selectedCategory === "all" 
-    ? mappedTours 
-    : mappedTours.filter(tour => tour.category === selectedCategory);
+  const filteredTours = useMemo(() => {
+    return selectedCategory === "all"
+      ? mappedTours
+      : mappedTours.filter((tour) => tour.category === selectedCategory);
+  }, [mappedTours, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-void pt-24 pb-16 px-4">
@@ -350,6 +355,10 @@ export default function Tours() {
                 <Button 
                   className="w-full bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]" 
                   data-testid={`button-book-tour-${tour.id}`}
+                  onClick={() => {
+                    setSelectedTour(tour as any);
+                    setBookingOpen(true);
+                  }}
                 >
                   <Camera className="w-4 h-4 mr-2" />
                   Reservar Tour
@@ -359,6 +368,12 @@ export default function Tours() {
             ))
           )}
         </div>
+
+        <TourBookingDialog
+          open={bookingOpen}
+          onOpenChange={setBookingOpen}
+          tour={selectedTour}
+        />
 
         {/* Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">

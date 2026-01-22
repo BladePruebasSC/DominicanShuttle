@@ -31,7 +31,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { dataSource } from '@/lib/data-source';
 import AuthGate from '@/components/auth-gate';
-import type { Tour, Vehicle, Testimonial, Booking } from '@shared/schema';
+import type { Tour, Vehicle, Testimonial, Booking, TourBooking } from '@shared/schema';
 import { COMPANY_INFO } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -554,6 +554,7 @@ export default function AdminDashboard() {
     vehicleType: 'all',
     search: '',
   });
+  const [bookingType, setBookingType] = useState<'transport' | 'tours'>('transport');
 
   // Queries
   const { data: tours = [], isLoading: toursLoading } = useQuery({
@@ -576,12 +577,13 @@ export default function AdminDashboard() {
   });
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
-    queryKey: ['/api/bookings'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/bookings');
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
+    queryKey: ['transportBookings'],
+    queryFn: () => dataSource.listTransportBookings(),
+  });
+
+  const { data: tourBookings = [], isLoading: tourBookingsLoading } = useQuery({
+    queryKey: ['tourBookings'],
+    queryFn: () => dataSource.listTourBookings(),
   });
 
   // Mutations
@@ -702,14 +704,26 @@ export default function AdminDashboard() {
   });
 
   const updateBookingStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => 
-      apiRequest('PATCH', `/api/bookings/${id}/status`, { status }),
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      dataSource.updateTransportBookingStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['transportBookings'] });
       toast({ title: 'Estado de reserva actualizado exitosamente' });
     },
     onError: () => {
       toast({ variant: 'destructive', title: 'Error al actualizar estado de reserva' });
+    },
+  });
+
+  const updateTourBookingStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      dataSource.updateTourBookingStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tourBookings'] });
+      toast({ title: 'Estado de reserva de tour actualizado' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'Error al actualizar reserva de tour' });
     },
   });
 
@@ -820,6 +834,48 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <Button
+                      type="button"
+                      variant={bookingType === 'transport' ? 'default' : 'outline'}
+                      onClick={() => setBookingType('transport')}
+                      className={
+                        bookingType === 'transport'
+                          ? 'bg-coco-gold text-black hover:bg-coco-gold/90'
+                          : 'border-white/20 text-white hover:bg-white/10 hover:text-white'
+                      }
+                    >
+                      Transporte
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={bookingType === 'tours' ? 'default' : 'outline'}
+                      onClick={() => setBookingType('tours')}
+                      className={
+                        bookingType === 'tours'
+                          ? 'bg-coco-gold text-black hover:bg-coco-gold/90'
+                          : 'border-white/20 text-white hover:bg-white/10 hover:text-white'
+                      }
+                    >
+                      Tours
+                    </Button>
+                  </div>
+
+                  {(() => {
+                    const normalizePhone = (p?: string | null) => (p || '').replace(/[^0-9]/g, '');
+                    const transportEmails = new Set((bookings as Booking[]).map(b => b.customerEmail?.toLowerCase()).filter(Boolean));
+                    const transportPhones = new Set((bookings as Booking[]).map(b => normalizePhone(b.customerPhone)).filter(Boolean));
+                    const tourEmails = new Set((tourBookings as TourBooking[]).map(b => b.customerEmail?.toLowerCase()).filter(Boolean));
+                    const tourPhones = new Set((tourBookings as TourBooking[]).map(b => normalizePhone(b.customerPhone)).filter(Boolean));
+
+                    const isSameCustomer = (email?: string | null, phone?: string | null) => {
+                      const e = (email || '').toLowerCase();
+                      const p = normalizePhone(phone);
+                      return (e && (transportEmails.has(e) && tourEmails.has(e))) || (p && (transportPhones.has(p) && tourPhones.has(p)));
+                    };
+
+                    return bookingType === 'transport' ? (
+                      <>
                   {/* Filtros */}
                   <div className="mb-6 p-4 bg-void/50 rounded-lg border border-white/10 space-y-4">
                     <div className="flex items-center gap-2 mb-4">
@@ -1016,6 +1072,11 @@ export default function AdminDashboard() {
                                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                                       <h3 className="font-semibold text-white text-lg">{booking.customerName}</h3>
                                       {getStatusBadge(booking.status)}
+                                      {isSameCustomer(booking.customerEmail, booking.customerPhone) && (
+                                        <Badge className="bg-coco-gold/10 text-coco-gold border border-coco-gold/30">
+                                          Cliente con Tour + Transporte
+                                        </Badge>
+                                      )}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-400">
                                       <div className="flex items-center gap-2">
@@ -1123,6 +1184,194 @@ export default function AdminDashboard() {
                           );
                         })}
                       </div>
+                    );
+                  })()}
+                      </>
+                    ) : (
+                      <>
+                        {/* Filtros (Tours) */}
+                        <div className="mb-6 p-4 bg-void/50 rounded-lg border border-white/10 space-y-4">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Filter className="h-4 w-4 text-coco-gold" />
+                            <h3 className="text-white font-semibold">Filtros (Tours)</h3>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                              <Label className="text-gray-300 text-xs">Buscar</Label>
+                              <div className="relative">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                <Input
+                                  placeholder="Nombre, email, tour..."
+                                  value={bookingFilters.search}
+                                  onChange={(e) => setBookingFilters({ ...bookingFilters, search: e.target.value })}
+                                  className="bg-void/50 border-white/10 text-white pl-8"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-gray-300 text-xs">Estado</Label>
+                              <Select
+                                value={bookingFilters.status}
+                                onValueChange={(value) => setBookingFilters({ ...bookingFilters, status: value })}
+                              >
+                                <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-void border-white/10">
+                                  <SelectItem value="all" className="text-white">Todos</SelectItem>
+                                  <SelectItem value="pending" className="text-white">Pendiente</SelectItem>
+                                  <SelectItem value="confirmed" className="text-white">Confirmado</SelectItem>
+                                  <SelectItem value="completed" className="text-white">Completado</SelectItem>
+                                  <SelectItem value="cancelled" className="text-white">Cancelado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-gray-300 text-xs">Desde</Label>
+                              <Input
+                                type="date"
+                                value={bookingFilters.dateFrom}
+                                onChange={(e) => setBookingFilters({ ...bookingFilters, dateFrom: e.target.value })}
+                                className="bg-void/50 border-white/10 text-white"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-gray-300 text-xs">Hasta</Label>
+                              <Input
+                                type="date"
+                                value={bookingFilters.dateTo}
+                                onChange={(e) => setBookingFilters({ ...bookingFilters, dateTo: e.target.value })}
+                                className="bg-void/50 border-white/10 text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lista de Reservas de Tours */}
+                        {tourBookingsLoading ? (
+                          <div className="text-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" />
+                          </div>
+                        ) : (() => {
+                          let filtered = tourBookings as TourBooking[];
+
+                          if (bookingFilters.status !== 'all') {
+                            filtered = filtered.filter(b => b.status === bookingFilters.status);
+                          }
+                          if (bookingFilters.search) {
+                            const s = bookingFilters.search.toLowerCase();
+                            filtered = filtered.filter(b =>
+                              b.customerName.toLowerCase().includes(s) ||
+                              b.customerEmail.toLowerCase().includes(s) ||
+                              (b.tourName || '').toLowerCase().includes(s) ||
+                              (b.customerPhone || '').includes(s)
+                            );
+                          }
+                          if (bookingFilters.dateFrom) {
+                            const from = new Date(bookingFilters.dateFrom);
+                            filtered = filtered.filter(b => new Date(b.tourDate) >= from);
+                          }
+                          if (bookingFilters.dateTo) {
+                            const to = new Date(bookingFilters.dateTo);
+                            to.setHours(23, 59, 59);
+                            filtered = filtered.filter(b => new Date(b.tourDate) <= to);
+                          }
+
+                          filtered.sort((a, b) => new Date(b.tourDate).getTime() - new Date(a.tourDate).getTime());
+
+                          const getStatusBadge = (status: string) => {
+                            const statusMap: Record<string, { label: string; className: string }> = {
+                              pending: { label: 'Pendiente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
+                              confirmed: { label: 'Confirmado', className: 'bg-green-500/20 text-green-500 border-green-500/30' },
+                              completed: { label: 'Completado', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+                              cancelled: { label: 'Cancelado', className: 'bg-red-500/20 text-red-500 border-red-500/30' },
+                            };
+                            const statusInfo = statusMap[status] || statusMap.pending;
+                            return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
+                          };
+
+                          const formatDate = (dateString: string) => {
+                            const date = new Date(dateString);
+                            return date.toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                          };
+
+                          return filtered.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">
+                              <p>No hay reservas de tours que coincidan con los filtros.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {filtered.map((tb) => (
+                                <Card key={tb.id} className="border-white/10 bg-glass-dark">
+                                  <CardContent className="p-6">
+                                    <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                          <h3 className="font-semibold text-white text-lg">{tb.customerName}</h3>
+                                          {getStatusBadge(tb.status)}
+                                          {isSameCustomer(tb.customerEmail, tb.customerPhone) && (
+                                            <Badge className="bg-coco-gold/10 text-coco-gold border border-coco-gold/30">
+                                              Cliente con Tour + Transporte
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-300">
+                                          <div className="flex items-center gap-2">
+                                            <MapPin className="h-4 w-4 text-coco-gold" />
+                                            <span><strong>Tour:</strong> {tb.tourName}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-coco-gold" />
+                                            <span><strong>Fecha:</strong> {formatDate(tb.tourDate)}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Mail className="h-4 w-4 text-coco-gold" />
+                                            <span>{tb.customerEmail}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Phone className="h-4 w-4 text-coco-gold" />
+                                            <span>{tb.customerPhone || '—'}</span>
+                                          </div>
+                                        </div>
+                                        {tb.notes && (
+                                          <div className="mt-3 text-sm text-gray-400">
+                                            <strong className="text-gray-300">Notas:</strong> {tb.notes}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div className="flex flex-col gap-2 min-w-[200px]">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => updateTourBookingStatus.mutate({ id: tb.id, status: 'confirmed' })}
+                                          className="bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/30"
+                                        >
+                                          <CheckCircle className="h-4 w-4 mr-2" />
+                                          Confirmar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => updateTourBookingStatus.mutate({ id: tb.id, status: 'cancelled' })}
+                                          className="bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30"
+                                        >
+                                          <XCircle className="h-4 w-4 mr-2" />
+                                          Cancelar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </>
                     );
                   })()}
                 </CardContent>

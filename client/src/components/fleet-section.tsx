@@ -1,40 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Luggage, Check } from "lucide-react";
 import { Link } from "wouter";
-
-const vehicles = [
-  {
-    name: "Sedán Económico",
-    description: "Ideal para 1-3 pasajeros con equipaje ligero.",
-    image: "https://images.unsplash.com/photo-1549924231-f129b911e442?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    capacity: 3,
-    luggage: 2,
-    price: 35,
-    features: ["Aire acondicionado", "Conductor profesional", "Agua gratis"],
-  },
-  {
-    name: "SUV Premium",
-    description: "Perfecto para familias o grupos pequeños.",
-    image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    capacity: 6,
-    luggage: 4,
-    price: 60,
-    features: ["Vehículo de lujo", "Asientos de cuero", "WiFi gratis"],
-  },
-  {
-    name: "Van Grupal",
-    description: "Ideal para grupos medianos y familias grandes.",
-    image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    capacity: 12,
-    luggage: 8,
-    price: 120,
-    features: ["Amplio espacio", "Sistema de sonido", "Refrigerios incluidos"],
-  },
-];
+import { dataSource } from "@/lib/data-source";
 
 export default function FleetSection() {
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => dataSource.listVehicles(),
+  });
+
+  const topVehicles = vehicles.slice(0, 3);
+
   return (
     <section className="py-20 bg-[#080808] relative z-20 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,15 +30,18 @@ export default function FleetSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {vehicles.map((vehicle, index) => (
+          {topVehicles.map((vehicle, index) => (
             <Card
-              key={index}
+              key={vehicle.id}
               className="overflow-hidden hover:shadow-xl transition-all duration-300 border-white/10 !bg-glass-dark backdrop-blur-sm hover:border-coco-gold/30 group"
               data-testid={`card-vehicle-${index}`}
             >
               <div className="aspect-video overflow-hidden relative">
                 <img
-                  src={vehicle.image}
+                  src={
+                    vehicle.imageUrl ||
+                    "https://images.unsplash.com/photo-1549924231-f129b911e442?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600"
+                  }
                   alt={vehicle.name}
                   className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition duration-700"
                 />
@@ -69,7 +51,9 @@ export default function FleetSection() {
                 <CardTitle className="text-xl text-white font-serif">
                   {vehicle.name}
                 </CardTitle>
-                <p className="text-gray-400 text-sm">{vehicle.description}</p>
+                <p className="text-gray-400 text-sm">
+                  {vehicle.capacityText || `Ideal para ${vehicle.capacity} pasajeros`}
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -80,16 +64,16 @@ export default function FleetSection() {
                     </div>
                     <div className="flex items-center">
                       <Luggage className="w-4 h-4 mr-1 text-coco-gold" />
-                      <span>{vehicle.luggage} maletas</span>
+                      <span>{vehicle.luggageCapacity} maletas</span>
                     </div>
                   </div>
                   <Badge className="bg-coco-gold/20 text-coco-gold border border-coco-gold/30 text-lg font-bold px-3 py-1">
-                    ${vehicle.price}
+                    ${vehicle.basePrice}
                   </Badge>
                 </div>
 
                 <ul className="space-y-1">
-                  {vehicle.features.map((feature, featureIndex) => (
+                  {(Array.isArray(vehicle.features) ? vehicle.features : []).slice(0, 4).map((feature, featureIndex) => (
                     <li
                       key={featureIndex}
                       className="flex items-center text-sm text-gray-300"

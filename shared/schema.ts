@@ -116,6 +116,21 @@ export const tourReviews = pgTable("tour_reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const tourBookings = pgTable("tour_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tourId: text("tour_id").notNull(),
+  tourName: text("tour_name").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone"),
+  tourDate: timestamp("tour_date").notNull(),
+  participants: integer("participants").notNull().default(1),
+  status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "completed" | "cancelled"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -153,6 +168,13 @@ export const insertTourReviewSchema = createInsertSchema(tourReviews).omit({
   updatedAt: true,
 });
 
+export const insertTourBookingSchema = createInsertSchema(tourBookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  status: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -168,3 +190,5 @@ export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type InsertTourReview = z.infer<typeof insertTourReviewSchema>;
 export type TourReview = typeof tourReviews.$inferSelect;
+export type InsertTourBooking = z.infer<typeof insertTourBookingSchema>;
+export type TourBooking = typeof tourBookings.$inferSelect;
