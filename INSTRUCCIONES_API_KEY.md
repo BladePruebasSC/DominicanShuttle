@@ -1,9 +1,16 @@
 # 🔑 Instrucciones para Configurar Google Maps API
 
-## ✅ Paso 1: Verificar que el archivo .env existe
+## ✅ Paso 1: Crear/Verificar el archivo `.env` (local)
 
-El archivo `.env` ya está creado con tu API key:
+En local, crea tu `.env` en la raíz del proyecto (mismo nivel que `package.json`).
+
+La forma más rápida es **copiar `env.example` a `.env`** y luego ajustar lo que necesites.
+
+Variables mínimas recomendadas:
+
 ```
+VITE_SUPABASE_URL=https://bmsgrtncmfafxwnlrxnt.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtc2dydG5jbWZhZnh3bmxyeG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzQ2MDAsImV4cCI6MjA3MzYxMDYwMH0.OUmL4oe_uw45zKqmMdlZUJ8G8nuVN2V4pGZbgad9urk
 VITE_GOOGLE_MAPS_API_KEY=AIzaSyCbiYnzceF5RCEbnOP07NQijBTKtujw56E
 ```
 
@@ -36,7 +43,7 @@ Abre las herramientas de desarrollador (F12) y ve a la pestaña "Console". Deber
 
 ### Si sigue diciendo "Google Maps no configurado":
 
-1. **Verifica que el archivo .env esté en la raíz del proyecto** (mismo nivel que package.json)
+1. **Verifica que el archivo `.env` esté en la raíz del proyecto** (mismo nivel que `package.json`)
 
 2. **Verifica que la variable empiece con `VITE_`:**
    ```

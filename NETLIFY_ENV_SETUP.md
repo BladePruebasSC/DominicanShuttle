@@ -13,21 +13,45 @@ La API de Google Maps no funciona en producción porque las variables de entorno
 4. En el menú lateral, busca **Environment variables** (Variables de entorno)
 5. Haz clic en **Add a variable** (Agregar variable)
 
-### Paso 2: Agregar la Variable
+### Paso 2: Agregar las Variables
 
-**Nombre de la variable:**
+Agrega estas variables (scope: **All scopes** o al menos **Build** y **Production**):
+
+**Supabase (obligatorio):**
+
+Nombre:
+```
+VITE_SUPABASE_URL
+```
+Valor:
+```
+https://bmsgrtncmfafxwnlrxnt.supabase.co
+```
+
+Nombre:
+```
+VITE_SUPABASE_ANON_KEY
+```
+Valor:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtc2dydG5jbWZhZnh3bmxyeG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzQ2MDAsImV4cCI6MjA3MzYxMDYwMH0.OUmL4oe_uw45zKqmMdlZUJ8G8nuVN2V4pGZbgad9urk
+```
+
+**Google Maps (opcional, solo si usas autocompletado/mapa):**
+
+Nombre:
 ```
 VITE_GOOGLE_MAPS_API_KEY
 ```
 
-**Valor:**
+Valor:
 ```
 AIzaSyCbiYnzceF5RCEbnOP07NQijBTKtujw56E
 ```
 
 **Importante:**
 - ✅ El nombre DEBE empezar con `VITE_` para que Vite lo incluya en el build
-- ✅ El nombre DEBE ser exactamente: `VITE_GOOGLE_MAPS_API_KEY` (mayúsculas)
+- ✅ El nombre DEBE ser exactamente (mayúsculas): `VITE_GOOGLE_MAPS_API_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 - ✅ Selecciona el scope: **All scopes** (Todos los ámbitos) o al menos **Build** y **Production**
 
 ### Paso 3: Re-deploy

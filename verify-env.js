@@ -2,6 +2,9 @@
 // Este script se ejecuta antes del build en Netlify
 
 const requiredEnvVars = [
+  'VITE_SUPABASE_URL',
+  'VITE_SUPABASE_ANON_KEY',
+  // opcional (si usas mapas/autocompletado):
   'VITE_GOOGLE_MAPS_API_KEY'
 ];
 
