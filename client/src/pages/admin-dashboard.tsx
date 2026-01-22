@@ -703,29 +703,7 @@ export default function AdminDashboard() {
     },
   });
 
-  const updateBookingStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      dataSource.updateTransportBookingStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transportBookings'] });
-      toast({ title: 'Estado de reserva actualizado exitosamente' });
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: 'Error al actualizar estado de reserva' });
-    },
-  });
-
-  const updateTourBookingStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      dataSource.updateTourBookingStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tourBookings'] });
-      toast({ title: 'Estado de reserva de tour actualizado' });
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: 'Error al actualizar reserva de tour' });
-    },
-  });
+  // Nota: El dashboard es para monitoreo/seguimiento (no para aceptar/denegar).
 
   // Callbacks estables para los formularios usando useRef para evitar re-renders
   const editingTourRef = useRef(editingTour);
@@ -841,8 +819,8 @@ export default function AdminDashboard() {
                       onClick={() => setBookingType('transport')}
                       className={
                         bookingType === 'transport'
-                          ? 'bg-coco-gold text-black hover:bg-coco-gold/90'
-                          : 'border-white/20 text-white hover:bg-white/10 hover:text-white'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
+                          : 'bg-void/40 border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
                       }
                     >
                       Transporte
@@ -853,8 +831,8 @@ export default function AdminDashboard() {
                       onClick={() => setBookingType('tours')}
                       className={
                         bookingType === 'tours'
-                          ? 'bg-coco-gold text-black hover:bg-coco-gold/90'
-                          : 'border-white/20 text-white hover:bg-white/10 hover:text-white'
+                          ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30'
+                          : 'bg-void/40 border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
                       }
                     >
                       Tours
@@ -1121,45 +1099,6 @@ export default function AdminDashboard() {
                                 )}
 
                                 <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                                  {booking.status === 'pending' && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'confirmed' })}
-                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Aceptar
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'cancelled' })}
-                                        className="border-red-500 text-red-500 hover:bg-red-500/10"
-                                      >
-                                        <XCircle className="h-4 w-4 mr-2" />
-                                        Rechazar
-                                      </Button>
-                                    </>
-                                  )}
-                                  {booking.status === 'confirmed' && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'in_progress' })}
-                                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                                    >
-                                      Marcar en Progreso
-                                    </Button>
-                                  )}
-                                  {booking.status === 'in_progress' && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'completed' })}
-                                      className="bg-gray-600 hover:bg-gray-700 text-white"
-                                    >
-                                      Marcar Completado
-                                    </Button>
-                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1347,22 +1286,10 @@ export default function AdminDashboard() {
                                       </div>
 
                                       <div className="flex flex-col gap-2 min-w-[200px]">
-                                        <Button
-                                          size="sm"
-                                          onClick={() => updateTourBookingStatus.mutate({ id: tb.id, status: 'confirmed' })}
-                                          className="bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/30"
-                                        >
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Confirmar
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => updateTourBookingStatus.mutate({ id: tb.id, status: 'cancelled' })}
-                                          className="bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30"
-                                        >
-                                          <XCircle className="h-4 w-4 mr-2" />
-                                          Cancelar
-                                        </Button>
+                                        <div className="text-right">
+                                          <p className="text-xs text-gray-400">Estado</p>
+                                          <p className="text-white font-semibold">{tb.status}</p>
+                                        </div>
                                       </div>
                                     </div>
                                   </CardContent>

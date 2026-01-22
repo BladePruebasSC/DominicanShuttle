@@ -125,6 +125,10 @@ export const tourBookings = pgTable("tour_bookings", {
   customerPhone: text("customer_phone"),
   tourDate: timestamp("tour_date").notNull(),
   participants: integer("participants").notNull().default(1),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
+  currency: text("currency").default("USD"),
+  paymentMethod: text("payment_method"),
+  paymentStatus: text("payment_status").default("pending"),
   status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "completed" | "cancelled"
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

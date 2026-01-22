@@ -404,6 +404,7 @@ export default function Booking() {
                             
                             // Generar opciones de minutos (00, 15, 30, 45)
                             const minuteOptions = ["00", "15", "30", "45"];
+                            const quickTimes = ["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
 
                             const handleTimeChange = (newHours: string, newMinutes: string) => {
                               const hoursNum = parseInt(newHours) || 0;
@@ -447,6 +448,27 @@ export default function Booking() {
                                   Pick-up time * <span className="text-gray-500 text-[10px] normal-case">(24-hour format)</span>
                                 </FormLabel>
                                 <FormControl>
+                                  <div className="flex flex-wrap gap-2 mb-2">
+                                    {quickTimes.map((t) => {
+                                      const [h, m] = t.split(":");
+                                      const isActive = `${hours}:${minutes}` === t;
+                                      return (
+                                        <Button
+                                          key={t}
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => handleTimeChange(h, m)}
+                                          className={
+                                            isActive
+                                              ? "bg-coco-gold/20 text-coco-gold border border-coco-gold/30 hover:bg-coco-gold/30"
+                                              : "bg-void/50 border-white/10 text-white hover:bg-white/5"
+                                          }
+                                        >
+                                          {t}
+                                        </Button>
+                                      );
+                                    })}
+                                  </div>
                                   <div className="flex items-center gap-2">
                                     <Select
                                       value={hours}
