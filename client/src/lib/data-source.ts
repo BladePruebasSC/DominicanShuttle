@@ -153,7 +153,9 @@ export const dataSource = {
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("available", true)
+        // Si `available` es NULL en algunos registros, `eq(true)` no devuelve nada.
+        // Mostramos todo excepto `available = false`.
+        .or("available.is.null,available.eq.true")
         .order("base_price", { ascending: true });
       if (error) throw error;
       return (data ?? []).map(mapVehicleRow);

@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Minus, Plus, CreditCard, Landmark, Wallet, Banknote } from "lucide-react";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const tourBookingSchema = z.object({
   customerName: z.string().min(2, "Nombre requerido"),
@@ -22,7 +23,7 @@ const tourBookingSchema = z.object({
   customerPhone: z.string().optional(),
   hotelOrPickup: z.string().optional(),
   tourDay: z.string().min(1, "Selecciona una fecha"),
-  tourTime: z.string().min(1, "Selecciona una hora"),
+  tourTime: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
   participants: z.coerce.number().int().min(1).max(200),
   paymentMethod: z.enum(["card", "transfer", "paypal", "cash"]).default("card"),
   notes: z.string().optional(),
@@ -212,22 +213,49 @@ export function TourBookingDialog({
             </div>
             <div>
               <Label className="text-gray-300">Hora</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {["08:00", "09:00", "10:00", "12:00", "14:00", "16:00"].map((t) => (
-                  <Button
-                    key={t}
-                    type="button"
-                    variant="outline"
-                    onClick={() => form.setValue("tourTime", t, { shouldValidate: true })}
-                    className={
-                      tourTime === t
-                        ? "bg-coco-gold/20 text-coco-gold border border-coco-gold/30 hover:bg-coco-gold/30"
-                        : "bg-void/50 border-white/10 text-white hover:bg-white/5"
-                    }
-                  >
-                    {t}
-                  </Button>
-                ))}
+              <div className="flex items-center gap-2">
+                <Select
+                  value={tourTime?.split(":")[0] || "09"}
+                  onValueChange={(hh) => {
+                    const mm = tourTime?.split(":")[1] || "00";
+                    form.setValue("tourTime", `${hh}:${mm}`, { shouldValidate: true });
+                  }}
+                >
+                  <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                    <SelectValue placeholder="HH" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-void border-white/10 max-h-[240px]">
+                    {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map((hh) => (
+                      <SelectItem key={hh} value={hh} className="text-white hover:bg-coco-gold/20">
+                        {hh}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <span className="text-white text-lg font-bold">:</span>
+
+                <Select
+                  value={tourTime?.split(":")[1] || "00"}
+                  onValueChange={(mm) => {
+                    const hh = tourTime?.split(":")[0] || "09";
+                    form.setValue("tourTime", `${hh}:${mm}`, { shouldValidate: true });
+                  }}
+                >
+                  <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                    <SelectValue placeholder="MM" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-void border-white/10 max-h-[240px]">
+                    {Array.from({ length: 60 }, (_, i) => i)
+                      .filter((m) => m % 5 === 0)
+                      .map((m) => String(m).padStart(2, "0"))
+                      .map((mm) => (
+                        <SelectItem key={mm} value={mm} className="text-white hover:bg-coco-gold/20">
+                          {mm}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               {form.formState.errors.tourTime && (
                 <p className="text-red-400 text-xs mt-1">{form.formState.errors.tourTime.message}</p>
@@ -316,7 +344,7 @@ export function TourBookingDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/30 text-white hover:bg-white/20 hover:text-white"
+              className="bg-void/60 border-white/40 text-white hover:bg-white/15 hover:text-white"
             >
               Cancelar
             </Button>
