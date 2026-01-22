@@ -125,11 +125,21 @@ export default function Booking() {
       });
       queryClient.invalidateQueries({ queryKey: ["transportBookings"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const status = error?.status ?? error?.statusCode ?? error?.code;
+      const message = error?.message || error?.details || String(error);
+
+      const isBookingsNotExposed =
+        String(status) === "404" ||
+        /relation .*bookings/i.test(message) ||
+        /could not find the.*bookings/i.test(message);
+
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo procesar la reserva. Inténtalo de nuevo.",
+        description: isBookingsNotExposed
+          ? "Supabase respondió 404 para 'bookings' (tabla no creada o sin permisos). Ejecuta la migración 007 y el script de GRANTS para exponerla."
+          : message || "No se pudo procesar la reserva. Inténtalo de nuevo.",
       });
     },
   });

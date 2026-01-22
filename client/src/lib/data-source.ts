@@ -273,6 +273,8 @@ export const dataSource = {
         estimated_price: payload.estimatedPrice,
         final_price: payload.finalPrice ?? null,
         special_requests: payload.specialRequests ?? null,
+        payment_method: (payload as any).paymentMethod ?? null,
+        payment_status: (payload as any).paymentStatus ?? "pending",
         status: "pending",
       };
 
