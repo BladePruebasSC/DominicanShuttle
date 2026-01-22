@@ -168,7 +168,7 @@ export default function Fleet() {
                   className="w-full bg-white text-black hover:bg-coco-gold hover:text-black transition font-bold uppercase text-xs tracking-[0.2em]" 
                   data-testid={`button-book-vehicle-${index}`}
                 >
-                  <Link href="/booking">Reservar Ahora</Link>
+                  <Link href={`/booking?vehicleId=${encodeURIComponent(vehicle.id)}`}>Reservar Ahora</Link>
                 </Button>
               </CardContent>
             </Card>

@@ -10,11 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Car, Clock, CheckCircle } from "lucide-react";
-import { LOCATIONS, VEHICLE_TYPES, SERVICE_TYPES } from "@/lib/constants";
+import { CalendarDays, Users, Car, Clock, CheckCircle, CreditCard, Landmark, Wallet, Banknote } from "lucide-react";
+import { LOCATIONS, SERVICE_TYPES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { InsertBooking } from "@shared/schema";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
@@ -23,11 +22,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
+import { PhoneInput } from "@/components/phone-input";
 
 export default function Booking() {
   const [currentStep, setCurrentStep] = useState(1);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [showMap, setShowMap] = useState(false);
   const [originPlaceId, setOriginPlaceId] = useState<string>("");
   const [destinationPlaceId, setDestinationPlaceId] = useState<string>("");
@@ -41,7 +41,13 @@ export default function Booking() {
     defaultValues: {
       serviceType: "one_way",
       passengers: 1,
+      paymentMethod: "card",
     },
+  });
+
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => dataSource.listVehicles(),
   });
 
   // Mostrar mapa cuando hay origen y destino
@@ -68,10 +74,11 @@ export default function Booking() {
           const passengers = parseInt(data.passengers);
           form.setValue("passengers", passengers);
         }
-        if (data.vehicleType) {
-          setSelectedVehicle(data.vehicleType);
-          form.setValue("vehicleType", data.vehicleType);
+        if (data.vehicleId) {
+          setSelectedVehicleId(data.vehicleId);
+          form.setValue("vehicleId", data.vehicleId);
         }
+        if (data.vehicleType) form.setValue("vehicleType", data.vehicleType);
         if (data.serviceType) form.setValue("serviceType", data.serviceType as "one_way" | "round_trip");
         if (data.estimatedPrice) setEstimatedPrice(data.estimatedPrice);
         if (data.pickupDate) form.setValue("pickupDate", data.pickupDate);
@@ -80,7 +87,7 @@ export default function Booking() {
         sessionStorage.removeItem("bookingData");
         
         // Avanzar al paso 2 si hay datos suficientes
-        if (data.origin && data.destination && data.vehicleType) {
+        if (data.origin && data.destination && (data.vehicleType || data.vehicleId)) {
           setCurrentStep(2);
         }
       } catch (e) {
@@ -88,6 +95,23 @@ export default function Booking() {
       }
     }
   }, [form]);
+
+  // Preselección desde /fleet?vehicleId=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vehicleId = params.get("vehicleId");
+    if (!vehicleId) return;
+    setSelectedVehicleId(vehicleId);
+    form.setValue("vehicleId", vehicleId);
+  }, [form]);
+
+  // Si tenemos vehicleId seleccionado, completar vehicleType automáticamente
+  useEffect(() => {
+    if (!selectedVehicleId) return;
+    const v = vehicles.find((x: any) => x.id === selectedVehicleId);
+    if (!v) return;
+    form.setValue("vehicleType", v.type);
+  }, [selectedVehicleId, vehicles, form]);
 
   const bookingMutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
@@ -110,27 +134,28 @@ export default function Booking() {
     },
   });
 
-  const calculatePrice = (passengers: number, serviceType: string, vehicleType: string) => {
-    const vehicle = VEHICLE_TYPES.find(v => v.value === vehicleType);
-    if (!vehicle) return 0;
-    
+  const calculatePrice = (serviceType: string, vehicleId?: string) => {
+    const v = vehicles.find((x: any) => x.id === vehicleId);
+    const base = v ? Number(v.basePrice) : 0;
     const multiplier = serviceType === "round_trip" ? 1.8 : 1;
-    return Math.round(vehicle.price * multiplier);
+    return Math.round(base * multiplier);
   };
 
-  const getRecommendedVehicle = (passengers: number) => {
-    if (passengers <= 3) return "sedan";
-    if (passengers <= 6) return "suv";
-    if (passengers <= 12) return "van";
-    return "bus";
+  const getRecommendedVehicleId = (passengers: number) => {
+    const sorted = vehicles
+      .slice()
+      .sort((a: any, b: any) => Number(a.capacity) - Number(b.capacity));
+    const fit = sorted.find((v: any) => Number(v.capacity) >= passengers);
+    return fit?.id || sorted[0]?.id || "";
   };
 
   const onSubmit = (data: InsertBooking) => {
-    const price = estimatedPrice || calculatePrice(data.passengers, data.serviceType, data.vehicleType);
+    const price = estimatedPrice || calculatePrice(data.serviceType, data.vehicleId || selectedVehicleId);
     
     const bookingData = {
       ...data,
       estimatedPrice: price.toString(),
+      vehicleId: data.vehicleId || selectedVehicleId || undefined,
       pickupDate: new Date(data.pickupDate),
       returnDate: data.returnDate ? new Date(data.returnDate) : undefined,
     };
@@ -535,9 +560,13 @@ export default function Booking() {
                                   onValueChange={(value) => {
                                     const passengers = parseInt(value);
                                     field.onChange(passengers);
-                                    const recommendedVehicle = getRecommendedVehicle(passengers);
-                                    setSelectedVehicle(recommendedVehicle);
-                                    form.setValue("vehicleType", recommendedVehicle);
+                                    const recommendedVehicleId = getRecommendedVehicleId(passengers);
+                                    if (recommendedVehicleId) {
+                                      setSelectedVehicleId(recommendedVehicleId);
+                                      form.setValue("vehicleId", recommendedVehicleId);
+                                      const v = vehicles.find((x: any) => x.id === recommendedVehicleId);
+                                      if (v) form.setValue("vehicleType", v.type);
+                                    }
                                   }}
                                 >
                                   <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12">
@@ -675,48 +704,42 @@ export default function Booking() {
                         control={form.control}
                         name="vehicleType"
                         render={({ field }) => {
-                          const getRecommendedVehicle = () => {
-                            const passengers = form.watch("passengers") || 1;
-                            if (passengers <= 3) return "sedan";
-                            if (passengers <= 6) return "suv";
-                            if (passengers <= 12) return "van";
-                            return "bus";
-                          };
-
                           return (
                             <FormItem>
                               <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Choose your vehicle *</FormLabel>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {VEHICLE_TYPES.map((vehicle) => {
-                                  const isRecommended = vehicle.value === getRecommendedVehicle();
-                                  const isSelected = field.value === vehicle.value;
-                                  const price = form.watch("serviceType") === "round_trip" 
-                                    ? Math.round(vehicle.price * 1.8) 
-                                    : vehicle.price;
+                                {vehicles.map((vehicle: any) => {
+                                  const passengers = form.watch("passengers") || 1;
+                                  const isRecommended = vehicle.id === getRecommendedVehicleId(passengers);
+                                  const isSelected = selectedVehicleId === vehicle.id;
+                                  const price = calculatePrice(form.watch("serviceType"), vehicle.id);
 
                                   return (
                                     <div
-                                      key={vehicle.value}
+                                      key={vehicle.id}
                                       onClick={() => {
-                                        field.onChange(vehicle.value);
-                                        setSelectedVehicle(vehicle.value);
+                                        setSelectedVehicleId(vehicle.id);
+                                        form.setValue("vehicleId", vehicle.id);
+                                        field.onChange(vehicle.type);
+                                        setEstimatedPrice(price);
+                                        form.setValue("estimatedPrice", price.toString());
                                       }}
                                       className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
                                         isSelected
                                           ? "border-coco-gold bg-coco-gold/10 ring-2 ring-coco-gold/50"
                                           : "border-white/10 hover:border-coco-gold/30 bg-void/30"
                                       }`}
-                                      data-testid={`vehicle-option-${vehicle.value}`}
+                                      data-testid={`vehicle-option-${vehicle.id}`}
                                     >
                                       {/* Vehicle Image */}
                                       <div className="relative h-32 w-full overflow-hidden bg-void/50">
                                         <img
-                                          src={vehicle.image}
-                                          alt={vehicle.label}
+                                          src={vehicle.imageUrl || "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=Vehicle"}
+                                          alt={vehicle.name}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
                                             // Fallback si la imagen no carga
-                                            e.currentTarget.src = "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=" + encodeURIComponent(vehicle.label);
+                                            e.currentTarget.src = "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=" + encodeURIComponent(vehicle.name);
                                           }}
                                         />
                                         {isRecommended && (
@@ -735,7 +758,7 @@ export default function Booking() {
                                       
                                       {/* Vehicle Info */}
                                       <div className="p-4">
-                                        <h5 className="font-semibold text-white text-sm mb-2">{vehicle.label}</h5>
+                                        <h5 className="font-semibold text-white text-sm mb-2">{vehicle.name}</h5>
                                         
                                         {/* Capacity Icons */}
                                         <div className="flex items-center gap-4 text-xs text-gray-400 mb-3">
@@ -743,14 +766,14 @@ export default function Booking() {
                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                                             </svg>
-                                            <span>{vehicle.capacity}</span>
+                                            <span>{vehicle.capacityText || `${vehicle.capacity} pax`}</span>
                                           </div>
                                           <div className="flex items-center gap-1">
                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                               <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                                               <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                                             </svg>
-                                            <span>{vehicle.luggage} maletas</span>
+                                            <span>{vehicle.luggageText || `${vehicle.luggageCapacity} maletas`}</span>
                                           </div>
                                         </div>
                                         
@@ -780,12 +803,12 @@ export default function Booking() {
                         }}
                       />
 
-                      {selectedVehicle && form.watch("passengers") && form.watch("serviceType") && (
+                      {selectedVehicleId && form.watch("serviceType") && (
                         <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-6">
                           <div className="flex justify-between items-center flex-wrap gap-2">
                             <span className="text-lg font-medium text-white">Estimated price:</span>
                             <Badge className="bg-coco-gold/20 text-coco-gold border border-coco-gold/30 text-xl font-bold px-4 py-2">
-                              ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), selectedVehicle)} USD
+                              ${calculatePrice(form.watch("serviceType"), selectedVehicleId)} USD
                             </Badge>
                           </div>
                         </div>
@@ -843,12 +866,10 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Phone (WhatsApp)</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="tel" 
-                                placeholder="+1 (xxx) xxx-xxxx" 
-                                {...field} 
-                                className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
-                                data-testid="input-customer-phone"
+                              <PhoneInput
+                                value={field.value}
+                                onChange={(v) => field.onChange(v)}
+                                placeholder="809 000 0000"
                               />
                             </FormControl>
                             <FormMessage />
@@ -893,22 +914,75 @@ export default function Booking() {
                           </div>
                           <div className="space-y-2">
                             <p className="text-gray-300"><strong className="text-white">Passengers:</strong> {form.watch("passengers")}</p>
-                            <p className="text-gray-300"><strong className="text-white">Vehicle:</strong> {VEHICLE_TYPES.find(v => v.value === form.watch("vehicleType"))?.label}</p>
+                            <p className="text-gray-300"><strong className="text-white">Vehicle:</strong> {vehicles.find((v: any) => v.id === (form.watch("vehicleId") || selectedVehicleId))?.name || form.watch("vehicleType")}</p>
                             <p className="text-gray-300"><strong className="text-white">Service:</strong> {form.watch("serviceType") === "one_way" ? "One-way" : "Round trip"}</p>
+                            <p className="text-gray-300"><strong className="text-white">Pago:</strong> {String(form.watch("paymentMethod") || "card")}</p>
                             <p className="text-gray-300"><strong className="text-white">Total Price:</strong> 
                               <Badge className="ml-2 bg-coco-gold/20 text-coco-gold border border-coco-gold/30">
-                                ${calculatePrice(form.watch("passengers"), form.watch("serviceType"), form.watch("vehicleType"))} USD
+                                ${calculatePrice(form.watch("serviceType"), form.watch("vehicleId") || selectedVehicleId)} USD
                               </Badge>
                             </p>
                           </div>
                         </div>
                       </div>
 
+                      <div className="bg-void/50 border border-white/10 rounded-lg p-6">
+                        <h4 className="text-white font-semibold mb-2">Método de pago (preferencia)</h4>
+                        <p className="text-xs text-gray-400 mb-4">
+                          Aún no procesamos pagos online. Al confirmar disponibilidad, te enviamos el enlace/instrucciones según el método seleccionado.
+                        </p>
+
+                        <FormField
+                          control={form.control}
+                          name="paymentMethod"
+                          render={({ field }) => {
+                            const methods = [
+                              { key: "card", label: "Tarjeta", icon: CreditCard },
+                              { key: "paypal", label: "PayPal", icon: Wallet },
+                              { key: "transfer", label: "Transferencia", icon: Landmark },
+                              { key: "cash", label: "Efectivo", icon: Banknote },
+                            ] as const;
+
+                            return (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {methods.map((m) => {
+                                  const Icon = m.icon;
+                                  const active = field.value === m.key;
+                                  return (
+                                    <button
+                                      key={m.key}
+                                      type="button"
+                                      onClick={() => field.onChange(m.key)}
+                                      className={
+                                        "text-left rounded-lg border p-4 transition " +
+                                        (active
+                                          ? "border-coco-gold/40 bg-coco-gold/10"
+                                          : "border-white/10 bg-void/40 hover:bg-white/5")
+                                      }
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg border border-white/10 bg-void/50 flex items-center justify-center">
+                                          <Icon className={active ? "text-coco-gold" : "text-gray-300"} />
+                                        </div>
+                                        <div>
+                                          <p className="text-white font-semibold">{m.label}</p>
+                                          <p className="text-xs text-gray-400">Próximamente</p>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }}
+                        />
+                      </div>
+
                       <div className="bg-coco-gold/10 border border-coco-gold/30 rounded-lg p-4">
                         <h4 className="font-semibold text-coco-gold mb-2">Important Information:</h4>
                         <ul className="text-sm text-gray-300 space-y-1">
                           <li>• The driver will contact you 30 minutes before pickup</li>
-                          <li>• Payment is made directly to the driver</li>
+                          <li>• El pago se coordina según el método seleccionado (por ahora)</li>
                           <li>• Includes free water and Wi-Fi in premium vehicles</li>
                           <li>• Free cancellation up to 24 hours before</li>
                         </ul>
@@ -922,7 +996,7 @@ export default function Booking() {
                         type="button" 
                         variant="outline" 
                         onClick={() => setCurrentStep(currentStep - 1)}
-                        className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+                        className="bg-void/60 border-white/40 text-white hover:bg-white/15 hover:text-white"
                         data-testid="button-previous"
                       >
                         Anterior
