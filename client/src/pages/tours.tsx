@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Star, MapPin, Camera, Utensils, Check, Loader2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { dataSource } from "@/lib/data-source";
 import type { Tour } from "@shared/schema";
 
 const tourCategories = [
@@ -184,14 +184,10 @@ const exampleTours = [
 export default function Tours() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // Obtener tours desde la API
+  // Obtener tours (Supabase en prod / fallback a /api en dev)
   const { data: toursData = [], isLoading, error } = useQuery({
-    queryKey: ['/api/tours'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/tours');
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
+    queryKey: ["tours"],
+    queryFn: () => dataSource.listTours(),
   });
 
   // Mapear los tours de la API al formato esperado

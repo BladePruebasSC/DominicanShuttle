@@ -29,6 +29,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { dataSource } from '@/lib/data-source';
 import AuthGate from '@/components/auth-gate';
 import type { Tour, Vehicle, Testimonial, Booking } from '@shared/schema';
 import { COMPANY_INFO } from '@/lib/constants';
@@ -556,21 +557,13 @@ export default function AdminDashboard() {
 
   // Queries
   const { data: tours = [], isLoading: toursLoading } = useQuery({
-    queryKey: ['/api/tours'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/tours');
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
+    queryKey: ['tours'],
+    queryFn: () => dataSource.listTours(),
   });
 
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
-    queryKey: ['/api/vehicles'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/vehicles');
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
+    queryKey: ['vehicles'],
+    queryFn: () => dataSource.listVehicles(),
   });
 
   const { data: testimonials = [], isLoading: testimonialsLoading } = useQuery({
@@ -593,9 +586,9 @@ export default function AdminDashboard() {
 
   // Mutations
   const createTour = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/tours', data),
+    mutationFn: (data: any) => dataSource.createTour(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tours'] });
+      queryClient.invalidateQueries({ queryKey: ['tours'] });
       toast({ title: 'Tour creado exitosamente' });
       setEditingTour(null);
     },
@@ -606,11 +599,10 @@ export default function AdminDashboard() {
 
   const updateTour = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest('PUT', `/api/tours/${id}`, data);
-      return await res.json();
+      return await dataSource.updateTour(id, data);
     },
     onSuccess: async (updatedTour) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tours'] });
+      queryClient.invalidateQueries({ queryKey: ['tours'] });
       toast({ title: 'Tour actualizado exitosamente' });
       setEditingTour(null);
     },
@@ -620,9 +612,11 @@ export default function AdminDashboard() {
   });
 
   const deleteTour = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/tours/${id}`),
+    mutationFn: async (id: string) => {
+      await dataSource.deleteTour(id);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tours'] });
+      queryClient.invalidateQueries({ queryKey: ['tours'] });
       toast({ title: 'Tour eliminado exitosamente' });
     },
     onError: () => {
@@ -631,9 +625,9 @@ export default function AdminDashboard() {
   });
 
   const createVehicle = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/vehicles', data),
+    mutationFn: (data: any) => dataSource.createVehicle(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       toast({ title: 'Vehículo creado exitosamente' });
       setEditingVehicle(null);
     },
@@ -644,11 +638,10 @@ export default function AdminDashboard() {
 
   const updateVehicle = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest('PUT', `/api/vehicles/${id}`, data);
-      return await res.json();
+      return await dataSource.updateVehicle(id, data);
     },
     onSuccess: async (updatedVehicle) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       toast({ title: 'Vehículo actualizado exitosamente' });
       setEditingVehicle(null);
     },
@@ -658,9 +651,11 @@ export default function AdminDashboard() {
   });
 
   const deleteVehicle = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/vehicles/${id}`),
+    mutationFn: async (id: string) => {
+      await dataSource.deleteVehicle(id);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       toast({ title: 'Vehículo eliminado exitosamente' });
     },
     onError: () => {

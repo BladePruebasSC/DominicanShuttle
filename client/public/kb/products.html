@@ -54,6 +54,11 @@
 
     <script>
       (function () {
+        // IMPORTANTE: el anon key de Supabase es público (se usa en el frontend).
+        // Esto permite que esta página funcione en Netlify aunque no exista backend /api.
+        var SUPABASE_URL = "https://bmsgrtncmfafxwnlrxnt.supabase.co";
+        var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtc2dydG5jbWZhZnh3bmxyeG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzQ2MDAsImV4cCI6MjA3MzYxMDYwMH0.OUmL4oe_uw45zKqmMdlZUJ8G8nuVN2V4pGZbgad9urk";
+
         function esc(v) {
           return String(v ?? "")
             .replace(/&/g, "&amp;")
@@ -106,12 +111,27 @@
           );
         }
 
+        function sbFetch(table) {
+          return fetch(SUPABASE_URL + "/rest/v1/" + table + "?select=*", {
+            method: "GET",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: "Bearer " + SUPABASE_ANON_KEY,
+              Accept: "application/json"
+            }
+          }).then(function (r) { return r.ok ? r.json() : []; }).catch(function(){ return []; });
+        }
+
         Promise.all([
-          fetch("/api/tours").then(function (r) { return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-          fetch("/api/vehicles").then(function (r) { return r.ok ? r.json() : []; }).catch(function(){ return []; })
+          sbFetch("tours"),
+          sbFetch("vehicles")
         ]).then(function (res) {
           var tours = Array.isArray(res[0]) ? res[0] : [];
           var vehicles = Array.isArray(res[1]) ? res[1] : [];
+
+          // Filtrar flags comunes (si existen)
+          tours = tours.filter(function (t) { return t.is_active !== false; });
+          vehicles = vehicles.filter(function (v) { return v.available !== false; });
 
           var toursHtml = tours.map(cardTour).join("");
           var vehiclesHtml = vehicles.map(cardVehicle).join("");
