@@ -16,6 +16,30 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Minus, Plus, CreditCard, Landmark, Wallet, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/phone-input";
+
+const TZ = "America/Santo_Domingo";
+
+function ymdInTZ(date: Date) {
+  // en-CA => YYYY-MM-DD
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function displayDateFromYmd(ymd: string) {
+  // mediodía UTC para evitar shift visual en distintos husos
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return new Intl.DateTimeFormat("es-DO", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(d);
+}
 
 const tourBookingSchema = z.object({
   customerName: z.string().min(2, "Nombre requerido"),
@@ -93,7 +117,8 @@ export function TourBookingDialog({
   const onSubmit = async (values: FormValues) => {
     if (!tour) return;
     try {
-      const iso = new Date(`${values.tourDay}T${values.tourTime}:00`).toISOString();
+      // Forzamos UTC-4 (Santo Domingo) para evitar que se guarde "un día antes" por TZ del navegador
+      const iso = new Date(`${values.tourDay}T${values.tourTime}:00-04:00`).toISOString();
       await dataSource.createTourBooking({
         tourId: tour.id,
         tourName: tour.name,
@@ -166,7 +191,11 @@ export function TourBookingDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-300">Teléfono (WhatsApp)</Label>
-              <Input className="bg-void/50 border-white/10 text-white" {...form.register("customerPhone")} placeholder="+1 ..." />
+              <PhoneInput
+                value={form.watch("customerPhone")}
+                onChange={(v) => form.setValue("customerPhone", v, { shouldValidate: true })}
+                placeholder="809 000 0000"
+              />
             </div>
             <div>
               <Label className="text-gray-300">Hotel / Punto de recogida (opcional)</Label>
@@ -188,17 +217,16 @@ export function TourBookingDialog({
                     }`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {tourDay ? format(new Date(tourDay), "PPP") : <span>Selecciona fecha</span>}
+                    {tourDay ? displayDateFromYmd(tourDay) : <span>Selecciona fecha</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                   <Calendar
                     mode="single"
-                    selected={tourDay ? new Date(tourDay) : undefined}
+                    selected={tourDay ? new Date(`${tourDay}T12:00:00Z`) : undefined}
                     onSelect={(date) => {
                       if (date) {
-                        const isoDay = date.toISOString().slice(0, 10); // YYYY-MM-DD
-                        form.setValue("tourDay", isoDay, { shouldValidate: true });
+                        form.setValue("tourDay", ymdInTZ(date), { shouldValidate: true });
                       }
                     }}
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dataSource } from "@/lib/data-source";
 
 export default function Fleet() {
-  const { data: vehicles, isLoading } = useQuery({
+  const { data: vehicles = [], isLoading, error } = useQuery({
     queryKey: ["vehicles"],
     queryFn: () => dataSource.listVehicles(),
   });
@@ -60,6 +60,17 @@ export default function Fleet() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-void pt-24 pb-16 px-4">
+        <div className="max-w-7xl mx-auto text-center py-12">
+          <p className="text-red-400 mb-2">Error al cargar la flota</p>
+          <p className="text-gray-400 text-sm">Verifica Supabase / permisos y vuelve a intentar.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-void pt-24 pb-16 px-4">
       <div className="max-w-7xl mx-auto">
@@ -93,6 +104,11 @@ export default function Fleet() {
 
         {/* Vehicles Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
+          {vehicles.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-400">
+              No hay vehículos disponibles ahora mismo.
+            </div>
+          )}
           {vehicles?.map((vehicle: any, index: number) => (
             <Card 
               key={vehicle.id} 
