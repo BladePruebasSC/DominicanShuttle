@@ -13,7 +13,6 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import SecretAdmin from "@/pages/secret-admin";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
-import InteractiveChat from "@/components/interactive-chat";
 import { useSecretCode } from "@/hooks/use-secret-code";
 
 function Router() {
@@ -44,7 +43,6 @@ function App() {
             <Router />
           </main>
           <Footer />
-          <InteractiveChat />
         </div>
         <Toaster />
       </TooltipProvider>
