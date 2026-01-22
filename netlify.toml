@@ -10,6 +10,11 @@
 # Scope: All scopes (o al menos Build y Production)
 
 [[redirects]]
+  from = "/kb/products"
+  to = "/kb/products.html"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
