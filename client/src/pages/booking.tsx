@@ -134,6 +134,14 @@ export default function Booking() {
     },
   });
 
+  const onInvalid = () => {
+    toast({
+      variant: "destructive",
+      title: "Faltan datos para confirmar",
+      description: "Revisa origen, destino, fecha/hora, vehículo y teléfono antes de confirmar.",
+    });
+  };
+
   const calculatePrice = (serviceType: string, vehicleId?: string) => {
     const v = vehicles.find((x: any) => x.id === vehicleId);
     const base = v ? Number(v.basePrice) : 0;
@@ -248,7 +256,7 @@ export default function Booking() {
               </div>
             ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
                   {currentStep === 1 && (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

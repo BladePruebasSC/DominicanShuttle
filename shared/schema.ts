@@ -146,6 +146,11 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   createdAt: true,
   updatedAt: true,
   status: true,
+}).extend({
+  // En el cliente manejamos fechas como string ISO en varios lugares (calendar/time).
+  // Coercion evita que el submit se bloquee silenciosamente.
+  pickupDate: z.coerce.date(),
+  returnDate: z.coerce.date().optional().nullable(),
 });
 
 export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
