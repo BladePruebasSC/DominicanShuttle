@@ -110,10 +110,10 @@ export default function BookingWidget() {
     <Card className="w-full max-w-4xl mx-auto lg:mx-0 shadow-2xl glass-panel border-white/10" style={{ overflow: 'visible' }}>
       <CardContent className="bg-transparent p-0" style={{ overflow: 'visible' }}>
         {/* Steps Navigation */}
-        <div className="flex items-center justify-center gap-2 md:gap-4 p-6 border-b border-white/10">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-white/10">
           <button
             onClick={() => setCurrentStep("trip")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
               currentStep === "trip"
                 ? "bg-coco-gold text-black font-bold"
                 : "bg-void/50 text-gray-400 hover:text-white"
@@ -122,12 +122,12 @@ export default function BookingWidget() {
             <MapPin className="w-4 h-4" />
             <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Trip</span>
           </button>
-          <div className="w-8 h-0.5 bg-white/20"></div>
+          <div className="hidden sm:block w-8 h-0.5 bg-white/20"></div>
           <button
             onClick={() => {
               if (origin && destination) setCurrentStep("vehicle");
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
               currentStep === "vehicle"
                 ? "bg-coco-gold text-black font-bold"
                 : origin && destination
@@ -138,12 +138,12 @@ export default function BookingWidget() {
             <Car className="w-4 h-4" />
             <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Vehicle</span>
           </button>
-          <div className="w-8 h-0.5 bg-white/20"></div>
+          <div className="hidden sm:block w-8 h-0.5 bg-white/20"></div>
           <button
             onClick={() => {
               if (origin && destination && selectedVehicle) setCurrentStep("passenger");
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
               currentStep === "passenger"
                 ? "bg-coco-gold text-black font-bold"
                 : origin && destination && selectedVehicle
@@ -390,7 +390,7 @@ export default function BookingWidget() {
                   <p className="text-gray-400 text-sm mb-4">We'll recommend the right vehicle</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="passengers"
@@ -549,7 +549,7 @@ export default function BookingWidget() {
                   </div>
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Button
                     type="button"
                     onClick={() => setCurrentStep("trip")}
@@ -583,11 +583,11 @@ export default function BookingWidget() {
                 <div className="bg-void/50 border border-white/10 rounded-lg p-6 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">From:</span>
-                    <span className="text-white">{LOCATIONS.AIRPORTS.find(a => a.value === origin)?.label || origin}</span>
+                    <span className="text-white text-right max-w-[60%] break-words">{LOCATIONS.AIRPORTS.find(a => a.value === origin)?.label || origin}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">To:</span>
-                    <span className="text-white">{LOCATIONS.DESTINATIONS.find(d => d.value === destination)?.label || destination}</span>
+                    <span className="text-white text-right max-w-[60%] break-words">{LOCATIONS.DESTINATIONS.find(d => d.value === destination)?.label || destination}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Passengers:</span>
@@ -603,7 +603,7 @@ export default function BookingWidget() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Button
                     type="button"
                     onClick={() => setCurrentStep("vehicle")}

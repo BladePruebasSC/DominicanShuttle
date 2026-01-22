@@ -29,7 +29,7 @@ export default function Navigation() {
 
   return (
     <nav
-      className={`fixed w-full z-50 transition-all duration-300 py-6 border-b ${
+      className={`fixed w-full z-50 transition-all duration-300 py-4 md:py-6 border-b ${
         isScrolled
           ? "nav-scrolled bg-glass-dark"
           : "bg-transparent border-transparent"
@@ -39,7 +39,7 @@ export default function Navigation() {
         {/* Logo */}
         <Link href="/" className="cursor-pointer hover:opacity-90 transition transform hover:scale-105 duration-500">
           <div className="flex flex-col leading-none">
-            <span className="font-serif font-bold text-white tracking-[0.2em] text-xl md:text-2xl">
+            <span className="font-serif font-bold text-white tracking-[0.12em] sm:tracking-[0.2em] text-lg sm:text-xl md:text-2xl whitespace-nowrap">
               DOMINICAN<span className="text-coco-gold italic">TRANSPORT</span>
             </span>
             <span className="text-[7px] text-coco-gold tracking-[0.6em] uppercase mt-1 text-center opacity-80">
@@ -92,7 +92,7 @@ export default function Navigation() {
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="w-80 bg-glass-dark border-white/10 backdrop-blur-xl"
+              className="w-[85vw] max-w-80 bg-glass-dark border-white/10 backdrop-blur-xl"
             >
               <div className="flex flex-col space-y-4 mt-8">
                 {navigationItems.map((item) => (

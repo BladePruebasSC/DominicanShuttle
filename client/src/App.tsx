@@ -14,6 +14,7 @@ import SecretAdmin from "@/pages/secret-admin";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { useSecretCode } from "@/hooks/use-secret-code";
+import ScrollToTop from "@/components/scroll-to-top";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <div className="min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1">
+            <ScrollToTop />
             <Router />
           </main>
           <Footer />

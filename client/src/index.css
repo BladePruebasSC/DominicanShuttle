@@ -143,6 +143,17 @@
   background-attachment: fixed;
 }
 
+.hero-bg {
+  /* Evita jitter/bugs en móviles (iOS/Android) con background-attachment: fixed */
+  will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .hero-bg {
+    background-attachment: scroll;
+  }
+}
+
 .hero-bg::before {
   content: '';
   position: absolute;
