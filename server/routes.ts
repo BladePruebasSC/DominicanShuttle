@@ -5,7 +5,114 @@ import { insertBookingSchema, insertContactMessageSchema, insertTourSchema, inse
 import { notificationService } from "./notifications";
 import { z } from "zod";
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  /**
+   * Página simple (HTML) para que Lyro (Tidio AI) pueda "aprender" productos/servicios.
+   * Ideal para añadir como fuente en Tidio: https://tu-dominio.com/kb/products
+   */
+  app.get("/kb/products", async (_req, res) => {
+    try {
+      const [tours, vehicles] = await Promise.all([
+        storage.getAllTours(),
+        storage.getAllVehicles(),
+      ]);
+
+      const html = `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Productos y Servicios | Dominican Transport Pro</title>
+    <meta name="description" content="Catálogo de tours y transportes: descripciones, duración, qué incluye, capacidades y precios base." />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.5; margin: 24px; color: #111; }
+      h1,h2,h3 { line-height: 1.2; }
+      .muted { color: #444; }
+      .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px 16px; }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+      @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>Productos y Servicios</h1>
+    <p class="muted">Esta página es una base de conocimiento para el asistente (Lyro/Tidio) y se mantiene actualizada desde el sistema.</p>
+
+    <h2>Tours</h2>
+    <div class="grid">
+      ${tours
+        .filter((t: any) => t?.isActive !== false)
+        .map((t: any) => {
+          const includes = Array.isArray(t?.includes) ? t.includes : [];
+          const highlights = Array.isArray(t?.highlights) ? t.highlights : [];
+          const rating = t?.rating ?? null;
+          const reviews = t?.reviews ?? null;
+          return `<div class="card">
+            <h3>${escapeHtml(t?.name)}</h3>
+            <p class="muted">${escapeHtml(t?.description)}</p>
+            <p><strong>Duración:</strong> ${escapeHtml(t?.duration)} &nbsp; <strong>Precio:</strong> USD ${escapeHtml(t?.price)}</p>
+            <p><strong>Categoría:</strong> ${escapeHtml(t?.category)} ${t?.popular ? " • <strong>Popular</strong>" : ""}</p>
+            ${
+              rating !== null || reviews !== null
+                ? `<p><strong>Rating:</strong> ${escapeHtml(rating)} / 5 &nbsp; <strong>Reseñas:</strong> ${escapeHtml(reviews)}</p>`
+                : ""
+            }
+            ${includes.length ? `<p><strong>Incluye:</strong></p><ul>${includes.map((x: any) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : ""}
+            ${highlights.length ? `<p><strong>Destacados:</strong></p><ul>${highlights.map((x: any) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : ""}
+          </div>`;
+        })
+        .join("")}
+    </div>
+
+    <h2>Transportes (Vehículos)</h2>
+    <p class="muted">Los precios aquí son <strong>precio base</strong>. El precio final depende de ruta, horario y tipo de servicio.</p>
+    <div class="grid">
+      ${vehicles
+        .filter((v: any) => v?.available !== false)
+        .map((v: any) => {
+          const features = Array.isArray(v?.features) ? v.features : [];
+          return `<div class="card">
+            <h3>${escapeHtml(v?.name)}</h3>
+            <p><strong>Tipo:</strong> ${escapeHtml(v?.type)} &nbsp; <strong>Capacidad:</strong> ${escapeHtml(v?.capacity)} pax &nbsp; <strong>Maletas:</strong> ${escapeHtml(v?.luggageCapacity)}</p>
+            <p><strong>Precio base:</strong> USD ${escapeHtml(v?.basePrice)}</p>
+            ${features.length ? `<p><strong>Incluye:</strong></p><ul>${features.map((x: any) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : ""}
+          </div>`;
+        })
+        .join("")}
+    </div>
+
+    <h2>Cómo reservar</h2>
+    <ul>
+      <li><strong>Transporte:</strong> usa la página <code>/booking</code> para crear tu reserva.</li>
+      <li><strong>Tours:</strong> mira los tours en <code>/tours</code> y contáctanos para disponibilidad.</li>
+    </ul>
+
+    <h2>Políticas rápidas</h2>
+    <ul>
+      <li>Operamos 24/7 según disponibilidad.</li>
+      <li>Recomendamos reservar con anticipación.</li>
+      <li>Si el vuelo se retrasa, notifica al equipo (si aplica) para coordinar.</li>
+    </ul>
+  </body>
+</html>`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.status(200).send(html);
+    } catch (e) {
+      res.status(500).send("Error generando knowledge base.");
+    }
+  });
+
   // Get all vehicles
   app.get("/api/vehicles", async (req, res) => {
     try {
