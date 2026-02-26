@@ -832,13 +832,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const schema = z.object({
       entityType: z.enum(["booking", "tour_booking", "contact_message"]),
-      entityId: z.string().min(1),
+      entityId: z.string().min(1).optional(),
+      customerEmail: z.string().email().optional(),
       hubspotDealId: z.string().optional().nullable(),
       hubspotContactId: z.string().optional().nullable(),
       status: z.string().optional().nullable(),
       paymentStatus: z.string().optional().nullable(),
       // opcional: campos extra para guardar
       zapierLeadId: z.string().optional().nullable(),
+    }).refine(data => data.entityId || data.customerEmail, {
+      message: "Either entityId or customerEmail is required",
     });
 
     try {
@@ -875,7 +878,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const { data, error } = await supabase.from(table).update(update).eq("id", body.entityId).select("*").single();
+      const { data, error } = await supabase
+        .from(table)
+        .update(update)
+        .eq(body.entityId ? "id" : "customer_email", body.entityId || body.customerEmail)
+        .select("*")
+        .single();
       if (error) {
         res.status(500).json({ message: "Failed to apply inbound webhook", error: error.message });
         return;
