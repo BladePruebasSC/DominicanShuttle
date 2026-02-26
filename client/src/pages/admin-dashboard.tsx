@@ -543,9 +543,10 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('bookings');
-  const [editingTour, setEditingTour] = useState<Tour | null>(null);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
-  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null);
+  // `undefined` se usa como "nuevo" (crear) en esta UI.
+  const [editingTour, setEditingTour] = useState<Tour | null | undefined>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null | undefined>(null);
+  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null | undefined>(null);
   const [contactInfo, setContactInfo] = useState(COMPANY_INFO);
   const [bookingFilters, setBookingFilters] = useState({
     status: 'all',
@@ -584,6 +585,19 @@ export default function AdminDashboard() {
   const { data: tourBookings = [], isLoading: tourBookingsLoading } = useQuery({
     queryKey: ['tourBookings'],
     queryFn: () => dataSource.listTourBookings(),
+  });
+
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboardStats', bookingFilters.dateFrom, bookingFilters.dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (bookingFilters.dateFrom) params.set('from', bookingFilters.dateFrom);
+      if (bookingFilters.dateTo) params.set('to', bookingFilters.dateTo);
+      const qs = params.toString();
+      const res = await apiRequest('GET', `/api/dashboard/stats${qs ? `?${qs}` : ''}`);
+      return await res.json();
+    },
+    staleTime: 30_000,
   });
 
   // Mutations
@@ -812,6 +826,83 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Estadísticas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <Card className="border-white/10 bg-void/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-white text-base">Transporte</CardTitle>
+                        <CardDescription className="text-gray-400">Resumen del rango seleccionado</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {statsLoading ? (
+                          <div className="text-gray-400 text-sm">Cargando…</div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <div className="text-xs text-gray-400">Total</div>
+                              <div className="text-white font-semibold text-lg">{dashboardStats?.transport?.total ?? 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Pagadas</div>
+                              <div className="text-emerald-300 font-semibold text-lg">
+                                {dashboardStats?.transport?.byPaymentStatus?.paid ?? 0}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Confirmadas</div>
+                              <div className="text-white font-semibold text-lg">
+                                {dashboardStats?.transport?.byStatus?.confirmed ?? 0}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Ingresos (USD)</div>
+                              <div className="text-coco-gold font-semibold text-lg">
+                                ${dashboardStats?.transport?.revenue ?? 0}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-white/10 bg-void/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-white text-base">Tours</CardTitle>
+                        <CardDescription className="text-gray-400">Resumen del rango seleccionado</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {statsLoading ? (
+                          <div className="text-gray-400 text-sm">Cargando…</div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <div className="text-xs text-gray-400">Total</div>
+                              <div className="text-white font-semibold text-lg">{dashboardStats?.tours?.total ?? 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Pagadas</div>
+                              <div className="text-violet-300 font-semibold text-lg">
+                                {dashboardStats?.tours?.byPaymentStatus?.paid ?? 0}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Confirmadas</div>
+                              <div className="text-white font-semibold text-lg">
+                                {dashboardStats?.tours?.byStatus?.confirmed ?? 0}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Ingresos (USD)</div>
+                              <div className="text-coco-gold font-semibold text-lg">
+                                ${dashboardStats?.tours?.revenue ?? 0}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   <div className="flex flex-wrap gap-2 mb-6">
                     <Button
                       type="button"
@@ -1004,8 +1095,8 @@ export default function AdminDashboard() {
                             );
                           };
 
-                          const formatDate = (dateString: string) => {
-                            const date = new Date(dateString);
+                          const formatDate = (dateValue: string | Date) => {
+                            const date = new Date(dateValue as any);
                             return date.toLocaleDateString('es-ES', {
                               year: 'numeric',
                               month: 'long',
@@ -1229,8 +1320,8 @@ export default function AdminDashboard() {
                             return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
                           };
 
-                          const formatDate = (dateString: string) => {
-                            const date = new Date(dateString);
+                          const formatDate = (dateValue: string | Date) => {
+                            const date = new Date(dateValue as any);
                             return date.toLocaleDateString('es-ES', {
                               year: 'numeric',
                               month: 'long',

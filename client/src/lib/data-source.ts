@@ -254,46 +254,11 @@ export const dataSource = {
   },
 
   async createTransportBooking(payload: InsertBooking): Promise<Booking> {
-    if (isSupabaseConfigured()) {
-      const toInsert = {
-        customer_name: payload.customerName,
-        customer_email: payload.customerEmail,
-        customer_phone: payload.customerPhone,
-        origin: payload.origin,
-        destination: payload.destination,
-        origin_place_id: payload.originPlaceId ?? null,
-        destination_place_id: payload.destinationPlaceId ?? null,
-        origin_coords: payload.originCoords ?? null,
-        destination_coords: payload.destinationCoords ?? null,
-        pickup_date: payload.pickupDate,
-        return_date: payload.returnDate ?? null,
-        passengers: payload.passengers,
-        vehicle_type: payload.vehicleType,
-        service_type: payload.serviceType,
-        estimated_price: payload.estimatedPrice,
-        final_price: payload.finalPrice ?? null,
-        special_requests: payload.specialRequests ?? null,
-        payment_method: (payload as any).paymentMethod ?? null,
-        payment_status: (payload as any).paymentStatus ?? "pending",
-        status: "pending",
-      };
-
-      const { data, error } = await supabase.from("bookings").insert(toInsert).select("*").single();
-      if (error) throw error;
-      // reutilizar list mapper
-      return (await this.listTransportBookings()).find((x) => x.id === data.id) as Booking;
-    }
-
     const res = await apiRequest("POST", "/api/bookings", payload);
     return await res.json();
   },
 
   async updateTransportBookingStatus(id: string, status: string): Promise<void> {
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
-      if (error) throw error;
-      return;
-    }
     await apiRequest("PATCH", `/api/bookings/${id}/status`, { status });
   },
 
@@ -333,56 +298,12 @@ export const dataSource = {
   },
 
   async createTourBooking(payload: InsertTourBooking): Promise<TourBooking> {
-    if (!isSupabaseConfigured()) {
-      throw new Error("Supabase no está configurado para crear reservas de tours.");
-    }
-
-    const toInsert = {
-      tour_id: payload.tourId,
-      tour_name: payload.tourName,
-      customer_name: payload.customerName,
-      customer_email: payload.customerEmail,
-      customer_phone: payload.customerPhone ?? null,
-      tour_date: payload.tourDate,
-      participants: payload.participants ?? 1,
-      total_price: (payload as any).totalPrice ?? null,
-      currency: (payload as any).currency ?? "USD",
-      payment_method: (payload as any).paymentMethod ?? null,
-      payment_status: (payload as any).paymentStatus ?? "pending",
-      notes: payload.notes ?? null,
-      status: "pending",
-    };
-
-    const { data, error } = await supabase.from("tour_bookings").insert(toInsert).select("*").single();
-    if (error) throw error;
-
-    // map to UI shape
-    return {
-      id: data.id,
-      tourId: data.tour_id,
-      tourName: data.tour_name,
-      customerName: data.customer_name,
-      customerEmail: data.customer_email,
-      customerPhone: data.customer_phone ?? null,
-      tourDate: data.tour_date,
-      participants: data.participants ?? 1,
-      totalPrice: data.total_price ?? null,
-      currency: data.currency ?? "USD",
-      paymentMethod: data.payment_method ?? null,
-      paymentStatus: data.payment_status ?? "pending",
-      status: data.status ?? "pending",
-      notes: data.notes ?? null,
-      createdAt: data.created_at ?? null,
-      updatedAt: data.updated_at ?? null,
-    } as TourBooking;
+    const res = await apiRequest("POST", "/api/tour-bookings", payload);
+    return await res.json();
   },
 
   async updateTourBookingStatus(id: string, status: string): Promise<void> {
-    if (!isSupabaseConfigured()) {
-      throw new Error("Supabase no está configurado para actualizar reservas de tours.");
-    }
-    const { error } = await supabase.from("tour_bookings").update({ status }).eq("id", id);
-    if (error) throw error;
+    await apiRequest("PATCH", `/api/tour-bookings/${id}/status`, { status });
   },
 };
 

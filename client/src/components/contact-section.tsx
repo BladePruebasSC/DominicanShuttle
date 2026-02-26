@@ -141,6 +141,7 @@ export default function ContactSection() {
                             type="tel"
                             placeholder="+1 (xxx) xxx-xxxx"
                             {...field}
+                            value={field.value ?? ""}
                             className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                             data-testid="input-phone"
                           />

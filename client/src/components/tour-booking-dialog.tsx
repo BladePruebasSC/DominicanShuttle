@@ -125,7 +125,7 @@ export function TourBookingDialog({
         customerName: values.customerName,
         customerEmail: values.customerEmail,
         customerPhone: values.customerPhone || null,
-        tourDate: iso,
+        tourDate: new Date(iso),
         participants: values.participants,
         totalPrice: total.toFixed(2) as any,
         currency: "USD" as any,

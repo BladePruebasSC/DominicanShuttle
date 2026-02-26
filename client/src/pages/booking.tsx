@@ -906,6 +906,7 @@ export default function Booking() {
                                 rows={3} 
                                 placeholder="Baby seat, extra luggage, etc." 
                                 {...field} 
+                                value={field.value ?? ""}
                                 className="bg-void/50 border-white/10 text-white placeholder:text-gray-500 focus:border-coco-gold"
                                 data-testid="textarea-special-requests"
                               />
@@ -925,10 +926,21 @@ export default function Booking() {
                           <div className="space-y-2">
                             <p className="text-gray-300"><strong className="text-white">Origen:</strong> {form.watch("origin")}</p>
                             <p className="text-gray-300"><strong className="text-white">Destino:</strong> {form.watch("destination")}</p>
-                            <p className="text-gray-300"><strong className="text-white">Fecha:</strong> {form.watch("pickupDate") && new Date(form.watch("pickupDate")).toLocaleString()}</p>
-                            {form.watch("returnDate") && (
-                              <p className="text-gray-300"><strong className="text-white">Regreso:</strong> {new Date(form.watch("returnDate")).toLocaleString()}</p>
-                            )}
+                            <p className="text-gray-300">
+                              <strong className="text-white">Fecha:</strong>{" "}
+                              {(() => {
+                                const d = form.watch("pickupDate");
+                                return d ? new Date(d as any).toLocaleString() : "—";
+                              })()}
+                            </p>
+                            {(() => {
+                              const rd = form.watch("returnDate");
+                              return rd ? (
+                                <p className="text-gray-300">
+                                  <strong className="text-white">Regreso:</strong> {new Date(rd as any).toLocaleString()}
+                                </p>
+                              ) : null;
+                            })()}
                           </div>
                           <div className="space-y-2">
                             <p className="text-gray-300"><strong className="text-white">Passengers:</strong> {form.watch("passengers")}</p>

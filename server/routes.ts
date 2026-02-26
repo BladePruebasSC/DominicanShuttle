@@ -1,9 +1,103 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBookingSchema, insertContactMessageSchema, insertTourSchema, insertVehicleSchema, insertTestimonialSchema } from "@shared/schema";
+import {
+  insertBookingSchema,
+  insertContactMessageSchema,
+  insertTourBookingSchema,
+  insertTourSchema,
+  insertVehicleSchema,
+  insertTestimonialSchema,
+} from "@shared/schema";
 import { notificationService } from "./notifications";
 import { z } from "zod";
+import { getSupabaseAdmin } from "./supabase-admin";
+import { emitZapierEvent, getZapierInboundSecret } from "./zapier";
+
+function mapBookingRow(row: any) {
+  return {
+    id: row.id,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerPhone: row.customer_phone,
+    origin: row.origin,
+    destination: row.destination,
+    originPlaceId: row.origin_place_id ?? null,
+    destinationPlaceId: row.destination_place_id ?? null,
+    originCoords: row.origin_coords ?? null,
+    destinationCoords: row.destination_coords ?? null,
+    pickupDate: row.pickup_date,
+    returnDate: row.return_date ?? null,
+    passengers: row.passengers,
+    vehicleType: row.vehicle_type,
+    serviceType: row.service_type,
+    estimatedPrice: row.estimated_price,
+    finalPrice: row.final_price ?? null,
+    specialRequests: row.special_requests ?? null,
+    status: row.status,
+    paymentStatus: row.payment_status ?? "pending",
+    paymentMethod: row.payment_method ?? null,
+    vehicleId: row.vehicle_id ?? null,
+    driverId: row.driver_id ?? null,
+    notes: row.notes ?? null,
+    leadSource: row.lead_source ?? null,
+    zapierLeadId: row.zapier_lead_id ?? null,
+    hubspotDealId: row.hubspot_deal_id ?? null,
+    hubspotContactId: row.hubspot_contact_id ?? null,
+    confirmedAt: row.confirmed_at ?? null,
+    paidAt: row.paid_at ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+function mapTourBookingRow(row: any) {
+  return {
+    id: row.id,
+    tourId: row.tour_id,
+    tourName: row.tour_name,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerPhone: row.customer_phone ?? null,
+    tourDate: row.tour_date,
+    participants: row.participants ?? 1,
+    totalPrice: row.total_price ?? null,
+    currency: row.currency ?? "USD",
+    paymentMethod: row.payment_method ?? null,
+    paymentStatus: row.payment_status ?? "pending",
+    status: row.status ?? "pending",
+    notes: row.notes ?? null,
+    leadSource: row.lead_source ?? null,
+    zapierLeadId: row.zapier_lead_id ?? null,
+    hubspotDealId: row.hubspot_deal_id ?? null,
+    hubspotContactId: row.hubspot_contact_id ?? null,
+    confirmedAt: row.confirmed_at ?? null,
+    paidAt: row.paid_at ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+function mapContactMessageRow(row: any) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone ?? null,
+    serviceInterest: row.service_interest,
+    message: row.message,
+    status: row.status ?? "new",
+    priority: row.priority ?? "normal",
+    assignedTo: row.assigned_to ?? null,
+    response: row.response ?? null,
+    leadSource: row.lead_source ?? null,
+    zapierLeadId: row.zapier_lead_id ?? null,
+    hubspotDealId: row.hubspot_deal_id ?? null,
+    hubspotContactId: row.hubspot_contact_id ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -276,15 +370,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/bookings", async (req, res) => {
     try {
       const validatedData = insertBookingSchema.parse(req.body);
-      const booking = await storage.createBooking(validatedData);
+      const supabase = getSupabaseAdmin();
+
+      let booking: any;
+      if (supabase) {
+        const { data, error } = await supabase
+          .from("bookings")
+          .insert({
+            customer_name: validatedData.customerName,
+            customer_email: validatedData.customerEmail,
+            customer_phone: validatedData.customerPhone,
+            origin: validatedData.origin,
+            destination: validatedData.destination,
+            origin_place_id: validatedData.originPlaceId ?? null,
+            destination_place_id: validatedData.destinationPlaceId ?? null,
+            origin_coords: validatedData.originCoords ?? null,
+            destination_coords: validatedData.destinationCoords ?? null,
+            pickup_date: validatedData.pickupDate.toISOString(),
+            return_date: validatedData.returnDate ? validatedData.returnDate.toISOString() : null,
+            passengers: validatedData.passengers,
+            vehicle_type: validatedData.vehicleType,
+            service_type: validatedData.serviceType,
+            estimated_price: validatedData.estimatedPrice as any,
+            final_price: (validatedData as any).finalPrice ?? null,
+            special_requests: (validatedData as any).specialRequests ?? null,
+            payment_status: (validatedData as any).paymentStatus ?? "pending",
+            payment_method: (validatedData as any).paymentMethod ?? null,
+            notes: (validatedData as any).notes ?? null,
+            lead_source: (validatedData as any).leadSource ?? "dashboard",
+            zapier_lead_id: (validatedData as any).zapierLeadId ?? null,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          res.status(500).json({ message: "Failed to create booking", error: error.message });
+          return;
+        }
+        booking = mapBookingRow(data);
+      } else {
+        booking = await storage.createBooking(validatedData);
+      }
       
       // Enviar notificación WhatsApp
       try {
-        await notificationService.sendBookingNotification(booking);
+        const forNotif = {
+          ...booking,
+          pickupDate: booking?.pickupDate instanceof Date ? booking.pickupDate : new Date(booking.pickupDate),
+          returnDate: booking?.returnDate ? new Date(booking.returnDate) : null,
+        };
+        await notificationService.sendBookingNotification(forNotif as any);
       } catch (notificationError) {
         console.error('Error enviando notificación de reserva:', notificationError);
         // No fallar la reserva si la notificación falla
       }
+
+      // Emitir a Zapier (Lead/Deal creation en HubSpot suele ocurrir allá)
+      await emitZapierEvent("booking.created", booking);
       
       res.status(201).json(booking);
     } catch (error) {
@@ -296,9 +438,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update booking payment status (para pago confirmado / fallido / reembolso)
+  app.patch("/api/bookings/:id/payment", async (req, res) => {
+    const schema = z.object({
+      paymentStatus: z.enum(["pending", "paid", "refunded", "failed"]),
+      paymentMethod: z.string().optional().nullable(),
+      finalPrice: z.union([z.string(), z.number()]).optional().nullable(),
+    });
+
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = schema.parse(req.body);
+      const nowIso = new Date().toISOString();
+
+      const update: Record<string, any> = {
+        payment_status: body.paymentStatus,
+        payment_method: body.paymentMethod ?? null,
+        updated_at: nowIso,
+      };
+      if (body.finalPrice !== undefined) update.final_price = body.finalPrice;
+      if (body.paymentStatus === "paid") update.paid_at = nowIso;
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .update(update)
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update booking payment", error: error.message });
+        return;
+      }
+
+      const mapped = mapBookingRow(data);
+      if (body.paymentStatus === "paid") {
+        await emitZapierEvent("booking.paid", mapped);
+      }
+
+      res.json(mapped);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid payment payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update booking payment" });
+      }
+    }
+  });
+
   // Get all bookings
   app.get("/api/bookings", async (req, res) => {
     try {
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        const { data, error } = await supabase.from("bookings").select("*").order("pickup_date", { ascending: false });
+        if (error) {
+          res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+          return;
+        }
+        res.json((data ?? []).map(mapBookingRow));
+        return;
+      }
+
       const bookings = await storage.getAllBookings();
       res.json(bookings);
     } catch (error) {
@@ -309,6 +515,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get booking by ID
   app.get("/api/bookings/:id", async (req, res) => {
     try {
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        const { data, error } = await supabase.from("bookings").select("*").eq("id", req.params.id).single();
+        if (error) {
+          res.status(404).json({ message: "Booking not found" });
+          return;
+        }
+        res.json(mapBookingRow(data));
+        return;
+      }
+
       const booking = await storage.getBookingById(req.params.id);
       if (!booking) {
         res.status(404).json({ message: "Booking not found" });
@@ -329,10 +546,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      const booking = await storage.updateBookingStatus(req.params.id, status);
+      const supabase = getSupabaseAdmin();
+      let booking: any;
+      if (supabase) {
+        const nowIso = new Date().toISOString();
+        const { data, error } = await supabase
+          .from("bookings")
+          .update({
+            status,
+            updated_at: nowIso,
+            ...(status === "confirmed" ? { confirmed_at: nowIso } : {}),
+          })
+          .eq("id", req.params.id)
+          .select("*")
+          .single();
+        if (error) {
+          res.status(500).json({ message: "Failed to update booking status", error: error.message });
+          return;
+        }
+        booking = mapBookingRow(data);
+      } else {
+        booking = await storage.updateBookingStatus(req.params.id, status);
+      }
       if (!booking) {
         res.status(404).json({ message: "Booking not found" });
         return;
+      }
+
+      if (status === "confirmed") {
+        await emitZapierEvent("booking.confirmed", booking);
       }
       res.json(booking);
     } catch (error) {
@@ -340,19 +582,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create tour booking (centralizado para poder emitir a Zapier)
+  app.post("/api/tour-bookings", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const validated = insertTourBookingSchema.parse(req.body);
+
+      const { data, error } = await supabase
+        .from("tour_bookings")
+        .insert({
+          tour_id: validated.tourId,
+          tour_name: validated.tourName,
+          customer_name: validated.customerName,
+          customer_email: validated.customerEmail,
+          customer_phone: (validated as any).customerPhone ?? null,
+          tour_date: (validated as any).tourDate instanceof Date ? (validated as any).tourDate.toISOString() : (validated as any).tourDate,
+          participants: (validated as any).participants ?? 1,
+          total_price: (validated as any).totalPrice ?? null,
+          currency: (validated as any).currency ?? "USD",
+          payment_method: (validated as any).paymentMethod ?? null,
+          payment_status: (validated as any).paymentStatus ?? "pending",
+          notes: (validated as any).notes ?? null,
+          status: "pending",
+          lead_source: (validated as any).leadSource ?? "dashboard",
+          zapier_lead_id: (validated as any).zapierLeadId ?? null,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to create tour booking", error: error.message });
+        return;
+      }
+
+      const mapped = mapTourBookingRow(data);
+      await emitZapierEvent("tour_booking.created", mapped);
+
+      res.status(201).json(mapped);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid tour booking data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create tour booking" });
+      }
+    }
+  });
+
+  app.patch("/api/tour-bookings/:id/status", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { status } = z
+        .object({ status: z.enum(["pending", "confirmed", "completed", "cancelled"]) })
+        .parse(req.body);
+
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("tour_bookings")
+        .update({
+          status,
+          updated_at: nowIso,
+          ...(status === "confirmed" ? { confirmed_at: nowIso } : {}),
+        })
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update tour booking status", error: error.message });
+        return;
+      }
+
+      const mapped = mapTourBookingRow(data);
+      if (status === "confirmed") {
+        await emitZapierEvent("tour_booking.confirmed", mapped);
+      }
+
+      res.json(mapped);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid status payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update tour booking status" });
+      }
+    }
+  });
+
+  app.patch("/api/tour-bookings/:id/payment", async (req, res) => {
+    const schema = z.object({
+      paymentStatus: z.enum(["pending", "paid", "refunded", "failed"]),
+      paymentMethod: z.string().optional().nullable(),
+      totalPrice: z.union([z.string(), z.number()]).optional().nullable(),
+    });
+
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = schema.parse(req.body);
+      const nowIso = new Date().toISOString();
+
+      const update: Record<string, any> = {
+        payment_status: body.paymentStatus,
+        payment_method: body.paymentMethod ?? null,
+        updated_at: nowIso,
+      };
+      if (body.totalPrice !== undefined) update.total_price = body.totalPrice;
+      if (body.paymentStatus === "paid") update.paid_at = nowIso;
+
+      const { data, error } = await supabase
+        .from("tour_bookings")
+        .update(update)
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update tour booking payment", error: error.message });
+        return;
+      }
+
+      const mapped = mapTourBookingRow(data);
+      if (body.paymentStatus === "paid") {
+        await emitZapierEvent("tour_booking.paid", mapped);
+      }
+
+      res.json(mapped);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid payment payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update tour booking payment" });
+      }
+    }
+  });
+
   // Create contact message
   app.post("/api/contact", async (req, res) => {
     try {
       const validatedData = insertContactMessageSchema.parse(req.body);
-      const message = await storage.createContactMessage(validatedData);
+      const supabase = getSupabaseAdmin();
+      let message: any;
+      if (supabase) {
+        const { data, error } = await supabase
+          .from("contact_messages")
+          .insert({
+            name: validatedData.name,
+            email: validatedData.email,
+            phone: (validatedData as any).phone ?? null,
+            service_interest: validatedData.serviceInterest,
+            message: validatedData.message,
+            status: "new",
+            lead_source: (validatedData as any).leadSource ?? "dashboard",
+            zapier_lead_id: (validatedData as any).zapierLeadId ?? null,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          res.status(500).json({ message: "Failed to create contact message", error: error.message });
+          return;
+        }
+        message = mapContactMessageRow(data);
+      } else {
+        message = await storage.createContactMessage(validatedData);
+      }
       
       // Enviar notificación WhatsApp
       try {
-        await notificationService.sendContactNotification(message);
+        await notificationService.sendContactNotification(message as any);
       } catch (notificationError) {
         console.error('Error enviando notificación de contacto:', notificationError);
         // No fallar el mensaje si la notificación falla
       }
+
+      await emitZapierEvent("lead.created", message);
       
       res.status(201).json(message);
     } catch (error) {
@@ -402,6 +818,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Contact information updated successfully", data: req.body });
     } catch (error) {
       res.status(500).json({ message: "Failed to update contact information" });
+    }
+  });
+
+  // Webhook inbound desde Zapier (actualizar IDs HubSpot / estados)
+  app.post("/api/zapier/inbound", async (req, res) => {
+    const secret = getZapierInboundSecret();
+    const provided = String(req.header("x-zapier-secret") || req.query.secret || "");
+    if (secret && provided !== secret) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const schema = z.object({
+      entityType: z.enum(["booking", "tour_booking", "contact_message"]),
+      entityId: z.string().min(1),
+      hubspotDealId: z.string().optional().nullable(),
+      hubspotContactId: z.string().optional().nullable(),
+      status: z.string().optional().nullable(),
+      paymentStatus: z.string().optional().nullable(),
+      // opcional: campos extra para guardar
+      zapierLeadId: z.string().optional().nullable(),
+    });
+
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = schema.parse(req.body);
+      const nowIso = new Date().toISOString();
+
+      const table =
+        body.entityType === "booking"
+          ? "bookings"
+          : body.entityType === "tour_booking"
+            ? "tour_bookings"
+            : "contact_messages";
+
+      const update: Record<string, any> = { updated_at: nowIso };
+      if (body.hubspotDealId !== undefined) update.hubspot_deal_id = body.hubspotDealId;
+      if (body.hubspotContactId !== undefined) update.hubspot_contact_id = body.hubspotContactId;
+      if (body.zapierLeadId !== undefined) update.zapier_lead_id = body.zapierLeadId;
+
+      // Solo aplicar status/payment si vienen (y si las tablas lo soportan)
+      if (body.entityType !== "contact_message") {
+        if (body.status) {
+          update.status = body.status;
+          if (body.status === "confirmed") update.confirmed_at = nowIso;
+        }
+        if (body.paymentStatus) {
+          update.payment_status = body.paymentStatus;
+          if (body.paymentStatus === "paid") update.paid_at = nowIso;
+        }
+      }
+
+      const { data, error } = await supabase.from(table).update(update).eq("id", body.entityId).select("*").single();
+      if (error) {
+        res.status(500).json({ message: "Failed to apply inbound webhook", error: error.message });
+        return;
+      }
+
+      const mapped =
+        body.entityType === "booking"
+          ? mapBookingRow(data)
+          : body.entityType === "tour_booking"
+            ? mapTourBookingRow(data)
+            : mapContactMessageRow(data);
+
+      res.json({ ok: true, updated: mapped });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid webhook payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to apply inbound webhook" });
+      }
+    }
+  });
+
+  // Estadísticas básicas (para dashboard y reporte diario Zapier/HubSpot)
+  app.get("/api/dashboard/stats", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const q = z
+        .object({
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+        .parse(req.query);
+
+      const fromIso = q.from ? new Date(String(q.from)).toISOString() : null;
+      const toIso = q.to ? new Date(String(q.to)).toISOString() : null;
+
+      const applyRange = (query: any, column: string) => {
+        let qq = query;
+        if (fromIso) qq = qq.gte(column, fromIso);
+        if (toIso) qq = qq.lte(column, toIso);
+        return qq;
+      };
+
+      const [transportRes, toursRes] = await Promise.all([
+        applyRange(
+          supabase.from("bookings").select("status,payment_status,estimated_price,final_price,created_at,pickup_date"),
+          "created_at",
+        ),
+        applyRange(
+          supabase.from("tour_bookings").select("status,payment_status,total_price,created_at,tour_date"),
+          "created_at",
+        ),
+      ]);
+
+      if (transportRes.error) throw transportRes.error;
+      if (toursRes.error) throw toursRes.error;
+
+      const transport = transportRes.data ?? [];
+      const tours = toursRes.data ?? [];
+
+      const countBy = (rows: any[], key: string) =>
+        rows.reduce<Record<string, number>>((acc, r) => {
+          const v = String(r?.[key] ?? "unknown");
+          acc[v] = (acc[v] || 0) + 1;
+          return acc;
+        }, {});
+
+      const sumMoney = (rows: any[], key: string) =>
+        rows.reduce((acc, r) => {
+          const n = typeof r?.[key] === "number" ? r[key] : parseFloat(String(r?.[key] ?? "0"));
+          return acc + (Number.isFinite(n) ? n : 0);
+        }, 0);
+
+      const transportRevenue = sumMoney(transport, "final_price") || sumMoney(transport, "estimated_price");
+      const toursRevenue = sumMoney(tours, "total_price");
+
+      res.json({
+        range: { from: fromIso, to: toIso },
+        transport: {
+          total: transport.length,
+          byStatus: countBy(transport, "status"),
+          byPaymentStatus: countBy(transport, "payment_status"),
+          revenue: Math.round(transportRevenue * 100) / 100,
+        },
+        tours: {
+          total: tours.length,
+          byStatus: countBy(tours, "status"),
+          byPaymentStatus: countBy(tours, "payment_status"),
+          revenue: Math.round(toursRevenue * 100) / 100,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to compute stats", error: error?.message || String(error) });
     }
   });
 

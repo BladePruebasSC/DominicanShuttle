@@ -31,6 +31,13 @@ export const bookings = pgTable("bookings", {
   status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "in_progress" | "completed" | "cancelled"
   paymentStatus: text("payment_status").default("pending"), // "pending" | "paid" | "refunded" | "failed"
   paymentMethod: text("payment_method"),
+  // Integraciones (Zapier / HubSpot)
+  leadSource: text("lead_source"),
+  zapierLeadId: text("zapier_lead_id"),
+  hubspotDealId: text("hubspot_deal_id"),
+  hubspotContactId: text("hubspot_contact_id"),
+  confirmedAt: timestamp("confirmed_at"),
+  paidAt: timestamp("paid_at"),
   vehicleId: text("vehicle_id"),
   driverId: text("driver_id"),
   notes: text("notes"),
@@ -99,6 +106,11 @@ export const contactMessages = pgTable("contact_messages", {
   priority: text("priority").default("normal"), // "low" | "normal" | "high" | "urgent"
   assignedTo: text("assigned_to"),
   response: text("response"),
+  // Integraciones
+  leadSource: text("lead_source"),
+  zapierLeadId: text("zapier_lead_id"),
+  hubspotDealId: text("hubspot_deal_id"),
+  hubspotContactId: text("hubspot_contact_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -130,6 +142,13 @@ export const tourBookings = pgTable("tour_bookings", {
   paymentMethod: text("payment_method"),
   paymentStatus: text("payment_status").default("pending"),
   status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "completed" | "cancelled"
+  // Integraciones (Zapier / HubSpot)
+  leadSource: text("lead_source"),
+  zapierLeadId: text("zapier_lead_id"),
+  hubspotDealId: text("hubspot_deal_id"),
+  hubspotContactId: text("hubspot_contact_id"),
+  confirmedAt: timestamp("confirmed_at"),
+  paidAt: timestamp("paid_at"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -146,6 +165,10 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   createdAt: true,
   updatedAt: true,
   status: true,
+  hubspotDealId: true,
+  hubspotContactId: true,
+  confirmedAt: true,
+  paidAt: true,
 }).extend({
   // En el cliente manejamos fechas como string ISO en varios lugares (calendar/time).
   // Coercion evita que el submit se bloquee silenciosamente.
@@ -157,6 +180,8 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
   id: true,
   createdAt: true,
   status: true,
+  hubspotDealId: true,
+  hubspotContactId: true,
 });
 
 export const insertTourSchema = createInsertSchema(tours).omit({
@@ -182,6 +207,13 @@ export const insertTourBookingSchema = createInsertSchema(tourBookings).omit({
   createdAt: true,
   updatedAt: true,
   status: true,
+  hubspotDealId: true,
+  hubspotContactId: true,
+  confirmedAt: true,
+  paidAt: true,
+}).extend({
+  // La UI envía ISO string; en server/DB queremos timestamp consistente.
+  tourDate: z.coerce.date(),
 });
 
 // Types
