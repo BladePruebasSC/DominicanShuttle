@@ -146,25 +146,25 @@ export default function RouteMap({
     directionsServiceRef.current.route(request, (result: any, status: string) => {
       setIsLoading(false);
       
-      if (status === window.google.maps.DirectionsStatus.OK) {
-        directionsRendererRef.current.setDirections(result);
-        
-        // Extraer información de la ruta
+      if (status === window.google.maps.DirectionsStatus.OK && result?.routes?.length > 0) {
         const route = result.routes[0];
-        const leg = route.legs[0];
-        
-        setRouteInfo({
-          distance: leg.distance.text,
-          duration: leg.duration.text,
-        });
-
-        // Ajustar vista para mostrar toda la ruta
-        const bounds = new window.google.maps.LatLngBounds();
-        route.legs.forEach((leg: any) => {
-          bounds.extend(leg.start_location);
-          bounds.extend(leg.end_location);
-        });
-        mapInstanceRef.current.fitBounds(bounds);
+        const legs = route?.legs;
+        if (legs?.length > 0) {
+          directionsRendererRef.current.setDirections(result);
+          const leg = legs[0];
+          setRouteInfo({
+            distance: leg.distance?.text ?? "",
+            duration: leg.duration?.text ?? "",
+          });
+          const bounds = new window.google.maps.LatLngBounds();
+          legs.forEach((l: any) => {
+            if (l.start_location) bounds.extend(l.start_location);
+            if (l.end_location) bounds.extend(l.end_location);
+          });
+          mapInstanceRef.current.fitBounds(bounds);
+        } else {
+          showMarkersOnly();
+        }
       } else {
         console.error("Error al calcular ruta:", status);
         // Mostrar mapa con marcadores en los puntos

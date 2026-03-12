@@ -167,11 +167,12 @@ export default function GooglePlacesAutocomplete({
           },
           (predictions: Place[] | null, status: string) => {
             setIsLoading(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-              console.log("✅ Sugerencias recibidas:", predictions.length);
-              setSuggestions(predictions.slice(0, 10)); // Aumentar a 10 sugerencias
+            const list = Array.isArray(predictions) ? predictions : [];
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && list.length > 0) {
+              console.log("✅ Sugerencias recibidas:", list.length);
+              setSuggestions(list.slice(0, 10)); // Aumentar a 10 sugerencias
               setShowSuggestions(true);
-              console.log("✅ Mostrando sugerencias:", predictions.slice(0, 10).length);
+              console.log("✅ Mostrando sugerencias:", list.slice(0, 10).length);
             } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
               console.log("ℹ️ Sin resultados para:", inputValue);
               setSuggestions([]);
@@ -227,8 +228,9 @@ export default function GooglePlacesAutocomplete({
         },
         (predictions: Place[] | null, status: string) => {
           setIsLoading(false);
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions.slice(0, 8));
+          const list = Array.isArray(predictions) ? predictions : [];
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && list.length > 0) {
+            setSuggestions(list.slice(0, 8));
             setShowSuggestions(true);
           }
         }
@@ -353,7 +355,7 @@ export default function GooglePlacesAutocomplete({
         >
           {suggestions.map((place, index) => (
             <button
-              key={place.place_id}
+              key={place.place_id || `place-${index}`}
               type="button"
               onClick={(e) => {
                 e.preventDefault();
@@ -378,10 +380,10 @@ export default function GooglePlacesAutocomplete({
                   <p className={`text-sm font-medium truncate ${
                     index === selectedIndex ? "text-white" : "text-white/90"
                   }`}>
-                    {place.structured_formatting.main_text}
+                    {place.structured_formatting?.main_text ?? place.description}
                   </p>
                   <p className="text-gray-400 text-xs truncate mt-0.5">
-                    {place.structured_formatting.secondary_text}
+                    {place.structured_formatting?.secondary_text ?? ""}
                   </p>
                 </div>
               </div>

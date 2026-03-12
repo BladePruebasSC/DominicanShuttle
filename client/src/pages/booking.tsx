@@ -24,6 +24,11 @@ import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import { PhoneInput } from "@/components/phone-input";
 
+// Placeholder SVG como data URI (evita ERR_NAME_NOT_RESOLVED de servicios externos)
+function getVehiclePlaceholder(_text?: string) {
+  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%231a1a1a' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23D4AF37' font-family='sans-serif' font-size='16'%3EVehicle%3C/text%3E%3C/svg%3E";
+}
+
 export default function Booking() {
   const [currentStep, setCurrentStep] = useState(1);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
@@ -752,12 +757,11 @@ export default function Booking() {
                                       {/* Vehicle Image */}
                                       <div className="relative h-32 w-full overflow-hidden bg-void/50">
                                         <img
-                                          src={vehicle.imageUrl || "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=Vehicle"}
-                                          alt={vehicle.name}
+                                          src={vehicle.imageUrl || getVehiclePlaceholder(vehicle.name || vehicle.type || "Vehicle")}
+                                          alt={vehicle.name || vehicle.type || "Vehicle"}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
-                                            // Fallback si la imagen no carga
-                                            e.currentTarget.src = "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=" + encodeURIComponent(vehicle.name);
+                                            e.currentTarget.src = getVehiclePlaceholder(vehicle.name || vehicle.type || "Vehicle");
                                           }}
                                         />
                                         {isRecommended && (

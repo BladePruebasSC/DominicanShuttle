@@ -480,8 +480,7 @@ export default function BookingWidget() {
                               alt={vehicle.label}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                // Fallback si la imagen no carga
-                                e.currentTarget.src = "https://via.placeholder.com/400x200/1a1a1a/D4AF37?text=" + encodeURIComponent(vehicle.label);
+                                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%231a1a1a' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23D4AF37' font-family='sans-serif' font-size='16'%3EVehicle%3C/text%3E%3C/svg%3E";
                               }}
                             />
                             {isRecommended && (
