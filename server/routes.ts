@@ -830,7 +830,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
 
-    console.log("[zapier/inbound] Received:", JSON.stringify(req.body));
+    const raw = (req.body && typeof req.body === "object" && req.body.data) ? req.body.data : (req.body || {});
+    const normalized = {
+      entityType: raw.entityType ?? raw.entity_type,
+      entityId: raw.entityId ?? raw.entity_id,
+      customerEmail: raw.customerEmail ?? raw.customer_email,
+      hubspotDealId: raw.hubspotDealId ?? raw.hubspot_deal_id,
+      hubspotContactId: raw.hubspotContactId ?? raw.hubspot_contact_id,
+      status: raw.status,
+      paymentStatus: raw.paymentStatus ?? raw.payment_status,
+      zapierLeadId: raw.zapierLeadId ?? raw.zapier_lead_id,
+    };
+    console.log("[zapier/inbound] Received:", JSON.stringify(raw), "-> normalized:", JSON.stringify(normalized));
+
     const schema = z.object({
       entityType: z.enum(["booking", "tour_booking", "contact_message"]),
       entityId: z.string().min(1).optional(),
@@ -851,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const body = schema.parse(req.body);
+      const body = schema.parse(normalized);
       const nowIso = new Date().toISOString();
 
       const table =
@@ -894,15 +906,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      console.log("[zapier/inbound] Updating", table, "where", matchColumn, "=", matchValue);
       const { data, error } = await supabase
         .from(table)
         .update(update)
         .eq(matchColumn, matchValue)
         .select("*")
-        .single();
+        .maybeSingle();
       if (error) {
         console.error("[zapier/inbound] Supabase error:", error.code, error.message, { matchColumn, matchValue });
         res.status(500).json({ message: "Failed to apply inbound webhook", error: error.message });
+        return;
+      }
+      if (!data) {
+        console.error("[zapier/inbound] No row found for", matchColumn, "=", matchValue, "in", table);
+        res.status(404).json({ message: "Record not found. Verify the ID exists in the " + table + " table." });
         return;
       }
 
