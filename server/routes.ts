@@ -831,15 +831,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const raw = (req.body && typeof req.body === "object" && req.body.data) ? req.body.data : (req.body || {});
+    const get = (obj: any, ...keys: string[]) => {
+      for (const k of keys) {
+        const v = obj?.[k];
+        if (v != null && v !== "") return v;
+      }
+      for (const key of Object.keys(obj || {})) {
+        if (keys.some(k => key.trim().replace(/\r\n/g, "") === k)) return obj[key];
+      }
+      return undefined;
+    };
     const normalized = {
-      entityType: raw.entityType ?? raw.entity_type,
-      entityId: raw.entityId ?? raw.entity_id,
-      customerEmail: raw.customerEmail ?? raw.customer_email,
-      hubspotDealId: raw.hubspotDealId ?? raw.hubspot_deal_id,
-      hubspotContactId: raw.hubspotContactId ?? raw.hubspot_contact_id,
-      status: raw.status,
-      paymentStatus: raw.paymentStatus ?? raw.payment_status,
-      zapierLeadId: raw.zapierLeadId ?? raw.zapier_lead_id,
+      entityType: get(raw, "entityType", "entity_type"),
+      entityId: get(raw, "entityId", "entity_id"),
+      customerEmail: get(raw, "customerEmail", "customer_email"),
+      hubspotDealId: get(raw, "hubspotDealId", "hubspot_deal_id"),
+      hubspotContactId: get(raw, "hubspotContactId", "hubspot_contact_id"),
+      status: get(raw, "status"),
+      paymentStatus: get(raw, "paymentStatus", "payment_status"),
+      zapierLeadId: get(raw, "zapierLeadId", "zapier_lead_id"),
     };
     console.log("[zapier/inbound] Received:", JSON.stringify(raw), "-> normalized:", JSON.stringify(normalized));
 
