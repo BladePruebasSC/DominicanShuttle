@@ -834,14 +834,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       entityType: z.enum(["booking", "tour_booking", "contact_message"]),
       entityId: z.string().min(1).optional(),
       customerEmail: z.string().email().optional(),
-      hubspotDealId: z.string().optional().nullable(),
+      hubspotDealId: z.string().min(1).optional().nullable(),
       hubspotContactId: z.string().optional().nullable(),
       status: z.string().optional().nullable(),
       paymentStatus: z.string().optional().nullable(),
-      // opcional: campos extra para guardar
       zapierLeadId: z.string().optional().nullable(),
-    }).refine(data => data.entityId || data.customerEmail, {
-      message: "Either entityId or customerEmail is required",
+    }).refine(data => (data.entityId && data.entityId.length > 0) || (data.customerEmail && data.customerEmail.length > 0) || (data.hubspotDealId && data.hubspotDealId.length > 0), {
+      message: "Either entityId, customerEmail, or hubspotDealId is required",
     });
 
     try {
@@ -878,10 +877,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      let matchColumn: string;
+      let matchValue: string;
+      if (body.entityId && body.entityId.length > 0) {
+        matchColumn = "id";
+        matchValue = body.entityId;
+      } else if (body.customerEmail && body.customerEmail.length > 0) {
+        matchColumn = "customer_email";
+        matchValue = body.customerEmail;
+      } else if (body.hubspotDealId && body.hubspotDealId.length > 0) {
+        matchColumn = "hubspot_deal_id";
+        matchValue = body.hubspotDealId;
+      } else {
+        res.status(400).json({ message: "Either entityId, customerEmail, or hubspotDealId is required" });
+        return;
+      }
+
       const { data, error } = await supabase
         .from(table)
         .update(update)
-        .eq(body.entityId ? "id" : "customer_email", body.entityId || body.customerEmail)
+        .eq(matchColumn, matchValue)
         .select("*")
         .single();
       if (error) {
