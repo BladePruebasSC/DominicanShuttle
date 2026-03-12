@@ -8,7 +8,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, MapPin, Users, Calendar, Car } from "lucide-react";
+import { Search, MapPin, Users, Calendar, Car, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { LOCATIONS, VEHICLE_TYPES, SERVICE_TYPES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
@@ -276,14 +279,60 @@ export default function BookingWidget() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Pick-up date *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12"
-                          />
-                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={`w-full h-12 justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                  !field.value && "text-gray-500"
+                                }`}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                  format(new Date(field.value + "T12:00:00"), "PPP")
+                                ) : (
+                                  <span>Selecciona la fecha</span>
+                                )}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value + "T12:00:00") : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  field.onChange(date.toISOString().split("T")[0]);
+                                }
+                              }}
+                              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                              initialFocus
+                              className="bg-void text-white"
+                              classNames={{
+                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                month: "space-y-4",
+                                caption: "flex justify-center pt-1 relative items-center",
+                                caption_label: "text-sm font-medium text-white",
+                                nav: "space-x-1 flex items-center",
+                                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                nav_button_previous: "absolute left-1",
+                                nav_button_next: "absolute right-1",
+                                table: "w-full border-collapse space-y-1",
+                                head_row: "flex",
+                                head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                row: "flex w-full mt-2",
+                                cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                day_selected: "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                day_today: "bg-coco-gold/30 text-white",
+                                day_outside: "text-gray-500 opacity-50",
+                                day_disabled: "text-gray-500 opacity-50",
+                              }}
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
