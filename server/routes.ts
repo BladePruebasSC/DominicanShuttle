@@ -830,6 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
 
+    console.log("[zapier/inbound] Received:", JSON.stringify(req.body));
     const schema = z.object({
       entityType: z.enum(["booking", "tour_booking", "contact_message"]),
       entityId: z.string().min(1).optional(),
@@ -900,6 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("*")
         .single();
       if (error) {
+        console.error("[zapier/inbound] Supabase error:", error.code, error.message, { matchColumn, matchValue });
         res.status(500).json({ message: "Failed to apply inbound webhook", error: error.message });
         return;
       }
