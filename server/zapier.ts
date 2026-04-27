@@ -1,4 +1,4 @@
-type ZapierEventType =
+type AutomationEventType =
   | "lead.created"
   | "booking.created"
   | "booking.confirmed"
@@ -7,21 +7,35 @@ type ZapierEventType =
   | "tour_booking.confirmed"
   | "tour_booking.paid";
 
-function envKeyForEvent(type: ZapierEventType) {
-  // booking.created -> ZAPIER_WEBHOOK_URL_BOOKING_CREATED
-  return `ZAPIER_WEBHOOK_URL_${type.toUpperCase().replace(/\./g, "_")}`;
+function envKeyForEvent(prefix: string, type: AutomationEventType) {
+  // booking.created -> MAKE_WEBHOOK_URL_BOOKING_CREATED
+  return `${prefix}_${type.toUpperCase().replace(/\./g, "_")}`;
 }
 
-function pickZapierWebhookUrl(type: ZapierEventType) {
-  return process.env[envKeyForEvent(type)] || process.env.ZAPIER_WEBHOOK_URL || "";
+function pickAutomationWebhookUrl(type: AutomationEventType) {
+  const makeByEvent = process.env[envKeyForEvent("MAKE_WEBHOOK_URL", type)];
+  const zapierByEvent = process.env[envKeyForEvent("ZAPIER_WEBHOOK_URL", type)];
+  return (
+    makeByEvent ||
+    process.env.MAKE_WEBHOOK_URL ||
+    zapierByEvent ||
+    process.env.ZAPIER_WEBHOOK_URL ||
+    ""
+  );
 }
 
-export function getZapierInboundSecret() {
-  return process.env.ZAPIER_INBOUND_SECRET || process.env.ZAPIER_SECRET || "";
+export function getAutomationInboundSecret() {
+  return (
+    process.env.MAKE_INBOUND_SECRET ||
+    process.env.AUTOMATION_INBOUND_SECRET ||
+    process.env.ZAPIER_INBOUND_SECRET ||
+    process.env.ZAPIER_SECRET ||
+    ""
+  );
 }
 
-export async function emitZapierEvent(type: ZapierEventType, payload: unknown) {
-  const url = pickZapierWebhookUrl(type);
+export async function emitAutomationEvent(type: AutomationEventType, payload: unknown) {
+  const url = pickAutomationWebhookUrl(type);
   if (!url) return;
 
   const body = {
@@ -43,10 +57,14 @@ export async function emitZapierEvent(type: ZapierEventType, payload: unknown) {
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      console.error(`[zapier] ${type} failed: ${res.status} ${txt}`.slice(0, 500));
+      console.error(`[automation] ${type} failed: ${res.status} ${txt}`.slice(0, 500));
     }
   } catch (e: any) {
-    console.error(`[zapier] ${type} error:`, e?.message || e);
+    console.error(`[automation] ${type} error:`, e?.message || e);
   }
 }
+
+// Backward compatibility while old imports still exist.
+export const emitZapierEvent = emitAutomationEvent;
+export const getZapierInboundSecret = getAutomationInboundSecret;
 

@@ -12,7 +12,7 @@ import {
 import { notificationService } from "./notifications";
 import { z } from "zod";
 import { getSupabaseAdmin } from "./supabase-admin";
-import { emitZapierEvent, getZapierInboundSecret } from "./zapier";
+import { emitAutomationEvent, getAutomationInboundSecret } from "./zapier";
 
 function mapBookingRow(row: any) {
   return {
@@ -426,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Emitir a Zapier (Lead/Deal creation en HubSpot suele ocurrir allá)
-      await emitZapierEvent("booking.created", booking);
+      await emitAutomationEvent("booking.created", booking);
       
       res.status(201).json(booking);
     } catch (error) {
@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const mapped = mapBookingRow(data);
       if (body.paymentStatus === "paid") {
-        await emitZapierEvent("booking.paid", mapped);
+        await emitAutomationEvent("booking.paid", mapped);
       }
 
       res.json(mapped);
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (status === "confirmed") {
-        await emitZapierEvent("booking.confirmed", booking);
+        await emitAutomationEvent("booking.confirmed", booking);
       }
       res.json(booking);
     } catch (error) {
@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mapped = mapTourBookingRow(data);
-      await emitZapierEvent("tour_booking.created", mapped);
+      await emitAutomationEvent("tour_booking.created", mapped);
 
       res.status(201).json(mapped);
     } catch (error) {
@@ -664,7 +664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const mapped = mapTourBookingRow(data);
       if (status === "confirmed") {
-        await emitZapierEvent("tour_booking.confirmed", mapped);
+        await emitAutomationEvent("tour_booking.confirmed", mapped);
       }
 
       res.json(mapped);
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const mapped = mapTourBookingRow(data);
       if (body.paymentStatus === "paid") {
-        await emitZapierEvent("tour_booking.paid", mapped);
+        await emitAutomationEvent("tour_booking.paid", mapped);
       }
 
       res.json(mapped);
@@ -768,7 +768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // No fallar el mensaje si la notificación falla
       }
 
-      await emitZapierEvent("lead.created", message);
+      await emitAutomationEvent("lead.created", message);
       
       res.status(201).json(message);
     } catch (error) {
@@ -821,10 +821,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Webhook inbound desde Zapier (actualizar IDs HubSpot / estados)
-  app.post("/api/zapier/inbound", async (req, res) => {
-    const secret = getZapierInboundSecret();
-    const provided = String(req.header("x-zapier-secret") || req.query.secret || "");
+  // Webhook inbound desde Make/Zapier (actualizar IDs HubSpot / estados)
+  const inboundAutomationHandler = async (req: any, res: any) => {
+    const secret = getAutomationInboundSecret();
+    const provided = String(
+      req.header("x-make-secret") ||
+      req.header("x-automation-secret") ||
+      req.header("x-zapier-secret") ||
+      req.query.secret ||
+      "",
+    );
     if (secret && provided !== secret) {
       res.status(401).json({ message: "Unauthorized" });
       return;
@@ -851,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       paymentStatus: get(raw, "paymentStatus", "payment_status"),
       zapierLeadId: get(raw, "zapierLeadId", "zapier_lead_id"),
     };
-    console.log("[zapier/inbound] Received:", JSON.stringify(raw), "-> normalized:", JSON.stringify(normalized));
+    console.log("[automation/inbound] Received:", JSON.stringify(raw), "-> normalized:", JSON.stringify(normalized));
 
     const schema = z.object({
       entityType: z.enum(["booking", "tour_booking", "contact_message"]),
@@ -916,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      console.log("[zapier/inbound] Updating", table, "where", matchColumn, "=", matchValue);
+      console.log("[automation/inbound] Updating", table, "where", matchColumn, "=", matchValue);
       const { data, error } = await supabase
         .from(table)
         .update(update)
@@ -924,12 +930,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("*")
         .maybeSingle();
       if (error) {
-        console.error("[zapier/inbound] Supabase error:", error.code, error.message, { matchColumn, matchValue });
+        console.error("[automation/inbound] Supabase error:", error.code, error.message, { matchColumn, matchValue });
         res.status(500).json({ message: "Failed to apply inbound webhook", error: error.message });
         return;
       }
       if (!data) {
-        console.error("[zapier/inbound] No row found for", matchColumn, "=", matchValue, "in", table);
+        console.error("[automation/inbound] No row found for", matchColumn, "=", matchValue, "in", table);
         res.status(404).json({ message: "Record not found. Verify the ID exists in the " + table + " table." });
         return;
       }
@@ -949,7 +955,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Failed to apply inbound webhook" });
       }
     }
-  });
+  };
+  app.post("/api/zapier/inbound", inboundAutomationHandler); // backward compatibility
+  app.post("/api/make/inbound", inboundAutomationHandler);
+  app.post("/api/automations/inbound", inboundAutomationHandler);
 
   // Estadísticas básicas (para dashboard y reporte diario Zapier/HubSpot)
   app.get("/api/dashboard/stats", async (req, res) => {
