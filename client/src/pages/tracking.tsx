@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 type Booking = {
   id: string;
@@ -48,21 +49,29 @@ export default function TrackingPage() {
 
   const resolvedBookingId = useMemo(() => bookingId.trim(), [bookingId]);
 
+  const safeJson = async (res: Response) => {
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(txt.startsWith("<!DOCTYPE") ? "Respuesta inválida del servidor API" : txt || "Respuesta no JSON");
+    }
+    return res.json();
+  };
+
   const loadData = async () => {
     if (!resolvedBookingId) return;
     setLoading(true);
     try {
       const [bookingRes, tripRes] = await Promise.all([
-        fetch(`/api/bookings/${resolvedBookingId}`),
-        fetch(`/api/trips/booking/${resolvedBookingId}`),
+        apiRequest("GET", `/api/bookings/${resolvedBookingId}`),
+        apiRequest("GET", `/api/trips/booking/${resolvedBookingId}`).catch(() => null),
       ]);
 
-      if (!bookingRes.ok) throw new Error("No se encontró la reserva");
-      const bookingData = await bookingRes.json();
+      const bookingData = await safeJson(bookingRes);
       setBooking(bookingData);
 
-      if (tripRes.ok) {
-        const tripData = await tripRes.json();
+      if (tripRes) {
+        const tripData = await safeJson(tripRes);
         setTrip(tripData);
       } else {
         setTrip(null);
@@ -99,17 +108,12 @@ export default function TrackingPage() {
     const deviceId = getOrCreateDeviceId();
     setLoading(true);
     try {
-      const res = await fetch("/api/trips/start", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const res = await apiRequest("POST", "/api/trips/start", {
           bookingId: resolvedBookingId,
           deviceId,
           clientShared: true,
-        }),
       });
-      if (!res.ok) throw new Error("No se pudo iniciar el viaje");
-      const data = await res.json();
+      const data = await safeJson(res);
       setTrip(data);
       toast({ title: "Viaje iniciado", description: "Tracking activo correctamente." });
     } catch (err: any) {
@@ -135,16 +139,12 @@ export default function TrackingPage() {
 
     const id = navigator.geolocation.watchPosition(
       async (pos) => {
-        await fetch(`/api/trips/${trip.id}/location`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
+        await apiRequest("PATCH", `/api/trips/${trip.id}/location`, {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             accuracy: pos.coords.accuracy ?? null,
             speed: pos.coords.speed ?? null,
             bearing: pos.coords.heading ?? null,
-          }),
         });
       },
       () => {
@@ -164,9 +164,8 @@ export default function TrackingPage() {
     if (!trip?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}/complete`, { method: "PATCH" });
-      if (!res.ok) throw new Error("No se pudo completar");
-      const data = await res.json();
+      const res = await apiRequest("PATCH", `/api/trips/${trip.id}/complete`);
+      const data = await safeJson(res);
       setTrip(data);
       if (watchId != null) {
         navigator.geolocation.clearWatch(watchId);
