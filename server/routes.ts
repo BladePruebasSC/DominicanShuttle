@@ -638,7 +638,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(500).json({ message: "Failed to start trip", error: error.message });
           return;
         }
-        res.json(mapTripRow(data));
+        const mappedTrip = mapTripRow(data);
+        await emitAutomationEvent("trip.started", {
+          ...mappedTrip,
+          bookingId: body.bookingId,
+          deviceId: body.deviceId ?? null,
+        });
+        res.json(mappedTrip);
         return;
       }
 
@@ -659,7 +665,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      res.status(201).json(mapTripRow(data));
+      const mappedTrip = mapTripRow(data);
+      await emitAutomationEvent("trip.started", {
+        ...mappedTrip,
+        bookingId: body.bookingId,
+        deviceId: body.deviceId ?? null,
+      });
+      res.status(201).json(mappedTrip);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid trip start payload", errors: error.errors });
@@ -775,7 +787,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      res.json(mapTripRow(data));
+      const mappedTrip = mapTripRow(data);
+      await emitAutomationEvent("trip.completed", mappedTrip);
+      res.json(mappedTrip);
     } catch (error) {
       res.status(500).json({ message: "Failed to complete trip" });
     }

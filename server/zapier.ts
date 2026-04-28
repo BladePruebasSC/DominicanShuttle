@@ -5,7 +5,9 @@ type AutomationEventType =
   | "booking.paid"
   | "tour_booking.created"
   | "tour_booking.confirmed"
-  | "tour_booking.paid";
+  | "tour_booking.paid"
+  | "trip.started"
+  | "trip.completed";
 
 function envKeyForEvent(prefix: string, type: AutomationEventType) {
   // booking.created -> MAKE_WEBHOOK_URL_BOOKING_CREATED
