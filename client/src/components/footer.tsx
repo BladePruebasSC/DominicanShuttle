@@ -46,10 +46,10 @@ export default function Footer() {
           <div className="lg:col-span-1">
             <div className="flex flex-col mb-4">
               <span className="text-xl md:text-2xl font-serif font-bold text-white">
-                DOMINICAN<span className="text-coco-gold">TRANSPORT</span>
+                COCO<span className="text-coco-gold">LUXE</span>
               </span>
               <span className="text-xs text-coco-gold tracking-[0.3em] uppercase mt-1">
-                PRO
+                PUNTA CANA
               </span>
             </div>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
@@ -150,7 +150,7 @@ export default function Footer() {
         <div className="border-t border-white/10 mt-8 md:mt-12 pt-6 md:pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-xs md:text-sm text-center md:text-left" data-testid="text-copyright">
-              © 2025 Dominican Transport Pro. Todos los derechos reservados.
+              © 2025 Cocoluxe. Todos los derechos reservados.
             </p>
             <div className="flex flex-wrap justify-center md:justify-end gap-4 md:gap-6">
               {legalLinks.map((link, index) => (

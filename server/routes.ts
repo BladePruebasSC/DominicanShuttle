@@ -99,6 +99,22 @@ function mapContactMessageRow(row: any) {
   };
 }
 
+function mapTripRow(row: any) {
+  return {
+    id: row.id,
+    bookingId: row.booking_id,
+    hypertrackTripId: row.hypertrack_trip_id ?? null,
+    status: row.status ?? "pending",
+    startTime: row.start_time ?? null,
+    endTime: row.end_time ?? null,
+    durationReal: row.duration_real ?? null,
+    clientShared: row.client_shared ?? false,
+    metadata: row.metadata ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
 function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -534,6 +550,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(booking);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch booking" });
+    }
+  });
+
+  // Obtener último trip de una reserva
+  app.get("/api/trips/booking/:bookingId", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("booking_id", req.params.bookingId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to fetch trip", error: error.message });
+        return;
+      }
+      if (!data) {
+        res.status(404).json({ message: "Trip not found" });
+        return;
+      }
+      res.json(mapTripRow(data));
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch trip" });
+    }
+  });
+
+  // Iniciar viaje tracking (base funcional para pruebas)
+  app.post("/api/trips/start", async (req, res) => {
+    const schema = z.object({
+      bookingId: z.string().uuid(),
+      deviceId: z.string().optional().nullable(),
+      clientShared: z.boolean().optional(),
+      metadata: z.record(z.any()).optional(),
+    });
+
+    try {
+      const body = schema.parse(req.body);
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const { data: existing, error: findError } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("booking_id", body.bookingId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (findError) {
+        res.status(500).json({ message: "Failed to check existing trip", error: findError.message });
+        return;
+      }
+
+      const mergedMetadata = {
+        ...(existing?.metadata ?? {}),
+        ...(body.metadata ?? {}),
+        ...(body.deviceId ? { device_id: body.deviceId } : {}),
+      };
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from("trips")
+          .update({
+            status: "in_progress",
+            start_time: existing.start_time ?? nowIso,
+            client_shared: body.clientShared ?? existing.client_shared ?? false,
+            metadata: mergedMetadata,
+            updated_at: nowIso,
+          })
+          .eq("id", existing.id)
+          .select("*")
+          .single();
+
+        if (error) {
+          res.status(500).json({ message: "Failed to start trip", error: error.message });
+          return;
+        }
+        res.json(mapTripRow(data));
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("trips")
+        .insert({
+          booking_id: body.bookingId,
+          status: "in_progress",
+          start_time: nowIso,
+          client_shared: body.clientShared ?? false,
+          metadata: mergedMetadata,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to create trip", error: error.message });
+        return;
+      }
+
+      res.status(201).json(mapTripRow(data));
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid trip start payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to start trip" });
+      }
+    }
+  });
+
+  // Actualizar ubicación del viaje
+  app.patch("/api/trips/:id/location", async (req, res) => {
+    const schema = z.object({
+      lat: z.number(),
+      lng: z.number(),
+      accuracy: z.number().optional().nullable(),
+      speed: z.number().optional().nullable(),
+      bearing: z.number().optional().nullable(),
+    });
+
+    try {
+      const body = schema.parse(req.body);
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { data: current, error: currentError } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
+      if (currentError) {
+        res.status(404).json({ message: "Trip not found" });
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const metadata = {
+        ...(current.metadata ?? {}),
+        latest_location: {
+          lat: body.lat,
+          lng: body.lng,
+          accuracy: body.accuracy ?? null,
+          speed: body.speed ?? null,
+          bearing: body.bearing ?? null,
+          at: nowIso,
+        },
+      };
+
+      const { data, error } = await supabase
+        .from("trips")
+        .update({
+          metadata,
+          updated_at: nowIso,
+        })
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update location", error: error.message });
+        return;
+      }
+
+      res.json(mapTripRow(data));
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid location payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update location" });
+      }
+    }
+  });
+
+  // Completar viaje
+  app.patch("/api/trips/:id/complete", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { data: current, error: currentError } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
+      if (currentError) {
+        res.status(404).json({ message: "Trip not found" });
+        return;
+      }
+
+      const now = new Date();
+      const start = current.start_time ? new Date(current.start_time) : null;
+      const durationReal = start ? Math.max(0, Math.round((now.getTime() - start.getTime()) / 1000)) : null;
+
+      const { data, error } = await supabase
+        .from("trips")
+        .update({
+          status: "completed",
+          end_time: now.toISOString(),
+          duration_real: durationReal,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to complete trip", error: error.message });
+        return;
+      }
+
+      res.json(mapTripRow(data));
+    } catch (error) {
+      res.status(500).json({ message: "Failed to complete trip" });
     }
   });
 

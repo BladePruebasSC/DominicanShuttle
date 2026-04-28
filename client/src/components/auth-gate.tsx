@@ -42,7 +42,7 @@ export default function AuthGate({ children }: AuthGateProps) {
     setError('');
 
     // Verificar la clave de acceso
-    if (accessKey.toLowerCase() === 'cderf') {
+    if (accessKey.trim() === 'A1234a') {
       setIsAuthenticated(true);
       // Guardar autenticación en localStorage con timestamp
       localStorage.setItem('admin_authenticated', 'true');
@@ -170,7 +170,7 @@ export default function AuthGate({ children }: AuthGateProps) {
               Dashboard de Administración de Imágenes
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Dominican Shuttle
+              Cocoluxe
             </p>
           </div>
         </CardContent>

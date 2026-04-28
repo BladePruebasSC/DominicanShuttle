@@ -64,7 +64,7 @@ export const CONTACT_SERVICES = [
 ];
 
 export const COMPANY_INFO = {
-  name: "Dominican Transport Pro",
+  name: "Cocoluxe",
   phone: "+1 (809) 444-8800",
   email: "info@dominicantransportpro.com",
   whatsapp: "18094448800",

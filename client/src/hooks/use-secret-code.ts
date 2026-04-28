@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 
-const SECRET_CODE = 'cderf';
+const SECRET_CODE = 'a1234a';
 const MAX_TIME_BETWEEN_KEYS = 2000; // 2 segundos entre teclas
 
 export function useSecretCode() {

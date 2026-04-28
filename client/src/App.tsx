@@ -11,6 +11,7 @@ import Fleet from "@/pages/fleet";
 import Contact from "@/pages/contact";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SecretAdmin from "@/pages/secret-admin";
+import TrackingPage from "@/pages/tracking";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { useSecretCode } from "@/hooks/use-secret-code";
@@ -24,6 +25,8 @@ function Router() {
       <Route path="/tours" component={Tours} />
       <Route path="/fleet" component={Fleet} />
       <Route path="/contact" component={Contact} />
+      <Route path="/tracking" component={TrackingPage} />
+      <Route path="/reserva/:id" component={TrackingPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/cderf" component={SecretAdmin} />
       <Route component={NotFound} />

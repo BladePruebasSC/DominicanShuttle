@@ -8,6 +8,7 @@ import { COMPANY_INFO } from "@/lib/constants";
 const navigationItems = [
   { href: "/", label: "Inicio" },
   { href: "/booking", label: "Reservar" },
+  { href: "/tracking", label: "Tracking" },
   { href: "/fleet", label: "Flota" },
   { href: "/tours", label: "Tours" },
   { href: "/contact", label: "Contacto" },
@@ -40,10 +41,10 @@ export default function Navigation() {
         <Link href="/" className="cursor-pointer hover:opacity-90 transition transform hover:scale-105 duration-500">
           <div className="flex flex-col leading-none">
             <span className="font-serif font-bold text-white tracking-[0.12em] sm:tracking-[0.2em] text-lg sm:text-xl md:text-2xl whitespace-nowrap">
-              DOMINICAN<span className="text-coco-gold italic">TRANSPORT</span>
+              COCO<span className="text-coco-gold italic">LUXE</span>
             </span>
             <span className="text-[7px] text-coco-gold tracking-[0.6em] uppercase mt-1 text-center opacity-80">
-              PRO
+              PUNTA CANA
             </span>
           </div>
         </Link>

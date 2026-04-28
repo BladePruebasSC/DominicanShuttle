@@ -1128,7 +1128,7 @@ export default function AdminDashboard() {
                               `Tipo de vehículo: ${booking.vehicleType}\n` +
                               `Precio estimado: $${booking.estimatedPrice} USD\n\n` +
                               `Por favor confirma si estos detalles son correctos.\n\n` +
-                              `Saludos,\nDominican Transport Pro`
+                              `Saludos,\nCocoluxe`
                             );
                             window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
                           };
