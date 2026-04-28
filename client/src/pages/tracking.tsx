@@ -28,13 +28,19 @@ type Trip = {
   metadata: Record<string, unknown> | null;
 };
 
-function getOrCreateDeviceId() {
+function getSavedDeviceId() {
   const key = "tracking_device_id";
-  const existing = localStorage.getItem(key);
-  if (existing) return existing;
-  const generated = crypto.randomUUID();
-  localStorage.setItem(key, generated);
-  return generated;
+  return localStorage.getItem(key) ?? "";
+}
+
+function saveDeviceId(deviceId: string) {
+  localStorage.setItem("tracking_device_id", deviceId);
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
 }
 
 export default function TrackingPage() {
@@ -43,11 +49,13 @@ export default function TrackingPage() {
   const [bookingId, setBookingId] = useState(routeBookingId);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [deviceId, setDeviceId] = useState(getSavedDeviceId());
   const [loading, setLoading] = useState(false);
   const [watchId, setWatchId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const resolvedBookingId = useMemo(() => bookingId.trim(), [bookingId]);
+  const resolvedDeviceId = useMemo(() => deviceId.trim(), [deviceId]);
 
   const safeJson = async (res: Response) => {
     const contentType = res.headers.get("content-type") || "";
@@ -105,16 +113,25 @@ export default function TrackingPage() {
 
   const startTrip = async () => {
     if (!resolvedBookingId) return;
-    const deviceId = getOrCreateDeviceId();
+    if (!resolvedDeviceId || !isUuid(resolvedDeviceId)) {
+      toast({
+        title: "Device ID inválido",
+        description:
+          "Ingresa un device_id real de HyperTrack con formato UUID antes de iniciar el viaje.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiRequest("POST", "/api/trips/start", {
           bookingId: resolvedBookingId,
-          deviceId,
+          deviceId: resolvedDeviceId,
           clientShared: true,
       });
       const data = await safeJson(res);
       setTrip(data);
+      saveDeviceId(resolvedDeviceId);
       toast({ title: "Viaje iniciado", description: "Tracking activo correctamente." });
     } catch (err: any) {
       toast({
@@ -202,6 +219,21 @@ export default function TrackingPage() {
             </Button>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-wider text-gray-400">
+              HyperTrack Device ID (UUID real)
+            </label>
+            <Input
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              placeholder="Ej: 1f9eb422-e51a-495a-8759-47f0f77d1d0b"
+              className="bg-void/50 border-white/10 text-white"
+            />
+            <p className="text-xs text-gray-500">
+              Usa un device_id real registrado en HyperTrack. Este valor se guarda en tu navegador.
+            </p>
+          </div>
+
           {booking && (
             <div className="text-sm text-gray-300 space-y-1">
               <p><strong>Reserva:</strong> {booking.id}</p>
@@ -222,7 +254,7 @@ export default function TrackingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={startTrip} disabled={loading || !booking}>
+            <Button onClick={startTrip} disabled={loading || !booking || !resolvedDeviceId}>
               Iniciar mi viaje
             </Button>
             <Button onClick={startLocationWatch} variant="outline" disabled={!trip || loading}>
