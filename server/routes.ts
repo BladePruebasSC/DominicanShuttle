@@ -710,16 +710,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const nowIso = new Date().toISOString();
+      const previousHistory = Array.isArray((current.metadata as any)?.location_history)
+        ? ((current.metadata as any).location_history as any[])
+        : [];
+      const nextPoint = {
+        lat: body.lat,
+        lng: body.lng,
+        accuracy: body.accuracy ?? null,
+        speed: body.speed ?? null,
+        bearing: body.bearing ?? null,
+        at: nowIso,
+      };
+      const locationHistory = [...previousHistory, nextPoint].slice(-500);
       const metadata = {
         ...(current.metadata ?? {}),
-        latest_location: {
-          lat: body.lat,
-          lng: body.lng,
-          accuracy: body.accuracy ?? null,
-          speed: body.speed ?? null,
-          bearing: body.bearing ?? null,
-          at: nowIso,
-        },
+        latest_location: nextPoint,
+        location_history: locationHistory,
       };
 
       const { data, error } = await supabase

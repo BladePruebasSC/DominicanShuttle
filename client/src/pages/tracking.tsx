@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,21 @@ type Trip = {
   metadata: Record<string, unknown> | null;
 };
 
+type LocationPoint = {
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+  speed?: number | null;
+  bearing?: number | null;
+  at?: string;
+};
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 function getSavedDeviceId() {
   const key = "tracking_device_id";
   return localStorage.getItem(key) ?? "";
@@ -56,6 +71,11 @@ export default function TrackingPage() {
 
   const resolvedBookingId = useMemo(() => bookingId.trim(), [bookingId]);
   const resolvedDeviceId = useMemo(() => deviceId.trim(), [deviceId]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const polylineRef = useRef<any>(null);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
   const safeJson = async (res: Response) => {
     const contentType = res.headers.get("content-type") || "";
@@ -110,6 +130,86 @@ export default function TrackingPage() {
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
   }, [watchId]);
+
+  useEffect(() => {
+    if (!trip?.id || trip.status !== "in_progress") return;
+    const interval = setInterval(() => {
+      void loadData();
+    }, 7000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id, trip?.status, resolvedBookingId]);
+
+  useEffect(() => {
+    const latest = ((trip?.metadata as any)?.latest_location ?? null) as LocationPoint | null;
+    const history = (((trip?.metadata as any)?.location_history ?? []) as LocationPoint[]).filter(
+      (p) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
+    );
+    if (!latest || !Number.isFinite(latest.lat) || !Number.isFinite(latest.lng)) return;
+    if (!mapRef.current) return;
+
+    const ensureMap = () => {
+      if (!mapRef.current || !window.google?.maps) return;
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          zoom: 15,
+          center: { lat: latest.lat, lng: latest.lng },
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+      }
+      if (!markerRef.current) {
+        markerRef.current = new window.google.maps.Marker({
+          position: { lat: latest.lat, lng: latest.lng },
+          map: mapInstanceRef.current,
+          title: "Ubicación actual",
+        });
+      } else {
+        markerRef.current.setPosition({ lat: latest.lat, lng: latest.lng });
+      }
+
+      if (!polylineRef.current) {
+        polylineRef.current = new window.google.maps.Polyline({
+          map: mapInstanceRef.current,
+          path: [],
+          geodesic: true,
+          strokeColor: "#D4AF37",
+          strokeOpacity: 0.85,
+          strokeWeight: 4,
+        });
+      }
+      polylineRef.current.setPath(history.map((p) => ({ lat: p.lat, lng: p.lng })));
+
+      const bounds = new window.google.maps.LatLngBounds();
+      history.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
+      bounds.extend({ lat: latest.lat, lng: latest.lng });
+      if (history.length > 1) {
+        mapInstanceRef.current.fitBounds(bounds);
+      } else {
+        mapInstanceRef.current.setCenter({ lat: latest.lat, lng: latest.lng });
+      }
+    };
+
+    if (!apiKey) return;
+    if (window.google?.maps) {
+      ensureMap();
+      return;
+    }
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (existingScript) {
+      existingScript.addEventListener("load", ensureMap, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=es&region=DO`;
+    script.async = true;
+    script.defer = true;
+    script.onload = ensureMap;
+    document.head.appendChild(script);
+  }, [trip, apiKey]);
 
   const startTrip = async () => {
     if (!resolvedBookingId) return;
@@ -250,6 +350,40 @@ export default function TrackingPage() {
               <p><strong>Inicio:</strong> {trip.startTime ?? "-"}</p>
               <p><strong>Fin:</strong> {trip.endTime ?? "-"}</p>
               <p><strong>Duración real:</strong> {trip.durationReal ?? "-"}s</p>
+              <p>
+                <strong>Puntos de recorrido:</strong>{" "}
+                {Array.isArray((trip.metadata as any)?.location_history)
+                  ? (trip.metadata as any).location_history.length
+                  : 0}
+              </p>
+            </div>
+          )}
+
+          {trip && (
+            <div className="border border-white/10 rounded-lg overflow-hidden">
+              {apiKey ? (
+                <div ref={mapRef} className="w-full h-[320px] bg-black/30" />
+              ) : (
+                (() => {
+                  const latest = ((trip.metadata as any)?.latest_location ?? null) as LocationPoint | null;
+                  if (latest && Number.isFinite(latest.lat) && Number.isFinite(latest.lng)) {
+                    const mapQuery = `${latest.lat},${latest.lng}`;
+                    return (
+                      <iframe
+                        title="Tracking en vivo"
+                        src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=16&output=embed`}
+                        className="w-full h-[320px] border-0"
+                        loading="lazy"
+                      />
+                    );
+                  }
+                  return (
+                    <div className="h-[180px] flex items-center justify-center text-gray-400 text-sm">
+                      Activa GPS en vivo para ver el mapa.
+                    </div>
+                  );
+                })()
+              )}
             </div>
           )}
 
