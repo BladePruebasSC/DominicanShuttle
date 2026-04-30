@@ -10,10 +10,15 @@ type Booking = {
   id: string;
   customerName: string;
   customerEmail: string;
+  customerPhone?: string | null;
   origin: string;
   destination: string;
   pickupDate: string;
   status: string;
+  serviceType?: string;
+  vehicleType?: string;
+  vehicleId?: string | null;
+  notes?: string | null;
 };
 
 type Trip = {
@@ -86,6 +91,19 @@ export default function TrackingPage() {
     return res.json();
   };
 
+  const parseAssignedPlate = (notes?: string | null) => {
+    if (!notes) return null;
+    const m = notes.match(/(?:placa|plate)\s*[:\-]\s*([A-Z0-9\-]+)/i);
+    return m?.[1] ?? null;
+  };
+
+  const bookingHasAssignment = useMemo(() => {
+    if (!booking) return false;
+    const hasVehicle = Boolean(booking.vehicleId || booking.vehicleType);
+    const hasPlate = Boolean(parseAssignedPlate(booking.notes));
+    return hasVehicle && hasPlate;
+  }, [booking]);
+
   const loadData = async () => {
     if (!resolvedBookingId) return;
     setLoading(true);
@@ -132,13 +150,13 @@ export default function TrackingPage() {
   }, [watchId]);
 
   useEffect(() => {
-    if (!trip?.id || trip.status !== "in_progress") return;
+    if (!resolvedBookingId) return;
     const interval = setInterval(() => {
       void loadData();
     }, 7000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip?.id, trip?.status, resolvedBookingId]);
+  }, [resolvedBookingId]);
 
   useEffect(() => {
     const latest = ((trip?.metadata as any)?.latest_location ?? null) as LocationPoint | null;
@@ -340,6 +358,15 @@ export default function TrackingPage() {
               <p><strong>Cliente:</strong> {booking.customerName} ({booking.customerEmail})</p>
               <p><strong>Ruta:</strong> {booking.origin} → {booking.destination}</p>
               <p><strong>Estado reserva:</strong> {booking.status}</p>
+              {bookingHasAssignment ? (
+                <p className="text-emerald-300">
+                  <strong>Vehículo confirmado:</strong> {booking.vehicleType ?? "Asignado"} · Placa {parseAssignedPlate(booking.notes)}
+                </p>
+              ) : (
+                <div className="mt-2 p-3 rounded border border-amber-300/30 bg-amber-300/10 text-amber-200">
+                  Tu vehículo será confirmado antes de la fecha de tu servicio. Recibirás una notificación con todos los detalles.
+                </div>
+              )}
             </div>
           )}
 
@@ -388,7 +415,7 @@ export default function TrackingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={startTrip} disabled={loading || !booking || !resolvedDeviceId}>
+            <Button onClick={startTrip} disabled={loading || !booking || !resolvedDeviceId || !bookingHasAssignment}>
               Iniciar mi viaje
             </Button>
             <Button onClick={startLocationWatch} variant="outline" disabled={!trip || loading}>
