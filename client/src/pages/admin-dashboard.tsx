@@ -556,6 +556,7 @@ export default function AdminDashboard() {
     search: '',
   });
   const [bookingType, setBookingType] = useState<'transport' | 'tours'>('transport');
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
   // Queries
   const { data: tours = [], isLoading: toursLoading } = useQuery({
@@ -714,6 +715,28 @@ export default function AdminDashboard() {
     },
     onError: () => {
       toast({ variant: 'destructive', title: 'Error al eliminar testimonio' });
+    },
+  });
+
+  const markBookingPaid = useMutation({
+    mutationFn: async (booking: Booking) => {
+      const amount = (booking as any).finalPrice ?? booking.estimatedPrice;
+      const res = await apiRequest('PATCH', `/api/bookings/${booking.id}/payment`, {
+        paymentStatus: 'paid',
+        paymentMethod: (booking as any).paymentMethod ?? 'manual_dashboard',
+        finalPrice: amount,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transportBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      toast({ title: 'Reserva marcada como pagada y webhook disparado' });
+      setPayingBookingId(null);
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'No se pudo marcar como pagada' });
+      setPayingBookingId(null);
     },
   });
 
@@ -1141,6 +1164,15 @@ export default function AdminDashboard() {
                                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                                       <h3 className="font-semibold text-white text-lg">{booking.customerName}</h3>
                                       {getStatusBadge(booking.status)}
+                                      {String((booking as any).paymentStatus ?? 'pending') === 'paid' ? (
+                                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                                          Pagada
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                                          Pago pendiente
+                                        </Badge>
+                                      )}
                                       {isSameCustomer(booking.customerEmail, booking.customerPhone) && (
                                         <Badge className="bg-coco-gold/10 text-coco-gold border border-coco-gold/30">
                                           Cliente con Tour + Transporte
@@ -1207,6 +1239,28 @@ export default function AdminDashboard() {
                                   >
                                     <Mail className="h-4 w-4 mr-2" />
                                     Email
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setPayingBookingId(booking.id);
+                                      markBookingPaid.mutate(booking);
+                                    }}
+                                    disabled={
+                                      payingBookingId === booking.id ||
+                                      markBookingPaid.isPending ||
+                                      String((booking as any).paymentStatus ?? 'pending') === 'paid'
+                                    }
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  >
+                                    {payingBookingId === booking.id ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                    )}
+                                    {String((booking as any).paymentStatus ?? 'pending') === 'paid'
+                                      ? 'Ya pagada'
+                                      : 'Marcar pagada'}
                                   </Button>
                                 </div>
                               </CardContent>
