@@ -834,12 +834,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       booking = await findBy("id", body.bookingId);
       if (!booking) booking = await findBy("zapier_lead_id", body.bookingId);
       if (!booking) booking = await findBy("hubspot_deal_id", body.bookingId);
+      if (!booking) {
+        // Fallback: si el enlace viene con id de trip, resolver su booking_id
+        const { data: tripRef } = await supabase
+          .from("trips")
+          .select("id, booking_id")
+          .eq("id", body.bookingId)
+          .maybeSingle();
+        if (tripRef?.booking_id) {
+          booking = await findBy("id", tripRef.booking_id);
+        }
+      }
 
       if (!booking) {
         res.status(404).json({
           message: "Booking not found",
           bookingId: body.bookingId,
-          hint: "Verifica que el enlace /feedback/:id use el ID real de bookings.id o un ID alterno registrado (zapier/hubspot).",
+          hint: "Verifica que el enlace /feedback/:id use el ID real de bookings.id o un ID alterno registrado (zapier/hubspot/trip).",
         });
         return;
       }
