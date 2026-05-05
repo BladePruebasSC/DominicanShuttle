@@ -3,6 +3,7 @@ type AutomationEventType =
   | "booking.created"
   | "booking.confirmed"
   | "booking.paid"
+  | "booking.vehicle_assigned"
   | "tour_booking.created"
   | "tour_booking.confirmed"
   | "tour_booking.paid"

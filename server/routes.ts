@@ -507,6 +507,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Asignar vehículo/chofer/placa a una reserva y disparar automatización
+  app.patch("/api/bookings/:id/assignment", async (req, res) => {
+    const schema = z.object({
+      vehicleId: z.string().optional().nullable(),
+      vehicleType: z.string().optional().nullable(),
+      driverId: z.string().optional().nullable(),
+      plate: z.string().optional().nullable(),
+      notes: z.string().optional().nullable(),
+      status: z.enum(["pending", "confirmed", "in_progress", "completed", "cancelled"]).optional(),
+    });
+
+    try {
+      const body = schema.parse(req.body);
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { data: previousRow, error: previousError } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
+      if (previousError || !previousRow) {
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const existingNotes = String(previousRow.notes ?? "");
+      const noteWithoutPlate = existingNotes.replace(/(?:^|\n)\s*plate\s*:\s*[^\n]*/gi, "").trim();
+      const plateLine = body.plate ? `plate:${body.plate}` : "";
+      const mergedNotes = [noteWithoutPlate, body.notes ?? null, plateLine]
+        .filter((x) => x && String(x).trim().length > 0)
+        .join("\n")
+        .trim();
+
+      const update: Record<string, any> = {
+        updated_at: nowIso,
+      };
+      if (body.vehicleId !== undefined) update.vehicle_id = body.vehicleId;
+      if (body.vehicleType !== undefined) update.vehicle_type = body.vehicleType;
+      if (body.driverId !== undefined) update.driver_id = body.driverId;
+      if (body.status) update.status = body.status;
+      if (mergedNotes.length > 0) update.notes = mergedNotes;
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .update(update)
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update booking assignment", error: error.message });
+        return;
+      }
+
+      const mapped = mapBookingRow(data);
+
+      const hadVehicleBefore = Boolean(previousRow.vehicle_id || previousRow.vehicle_type);
+      const hasVehicleNow = Boolean(data.vehicle_id || data.vehicle_type);
+      const justAssigned = !hadVehicleBefore && hasVehicleNow;
+
+      if (justAssigned) {
+        await emitAutomationEvent("booking.vehicle_assigned", {
+          ...mapped,
+          plate: body.plate ?? null,
+        });
+      }
+
+      res.json({
+        ...mapped,
+        plate: body.plate ?? null,
+        assignmentEventTriggered: justAssigned,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid assignment payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update booking assignment" });
+      }
+    }
+  });
+
   // Get all bookings
   app.get("/api/bookings", async (req, res) => {
     try {
