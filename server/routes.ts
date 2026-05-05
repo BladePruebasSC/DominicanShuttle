@@ -804,7 +804,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guardar encuesta post-viaje
   app.post("/api/feedback", async (req, res) => {
     const schema = z.object({
-      bookingId: z.string().uuid(),
+      // Acepta UUID y también IDs legibles tipo "CL-48291"
+      bookingId: z.string().trim().min(1),
       rating: z.number().int().min(1).max(5),
       comment: z.string().max(500).optional().nullable(),
       improvement: z.string().max(500).optional().nullable(),
