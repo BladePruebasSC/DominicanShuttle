@@ -820,21 +820,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .select("id, customer_name, customer_email")
-        .eq("id", body.bookingId)
-        .single();
+      let booking: { id: string; customer_name: string; customer_email: string } | null = null;
 
-      if (bookingError || !booking) {
-        res.status(404).json({ message: "Booking not found" });
+      const findBy = async (column: "id" | "zapier_lead_id" | "hubspot_deal_id", value: string) => {
+        const { data } = await supabase
+          .from("bookings")
+          .select("id, customer_name, customer_email")
+          .eq(column, value)
+          .maybeSingle();
+        return data as { id: string; customer_name: string; customer_email: string } | null;
+      };
+
+      booking = await findBy("id", body.bookingId);
+      if (!booking) booking = await findBy("zapier_lead_id", body.bookingId);
+      if (!booking) booking = await findBy("hubspot_deal_id", body.bookingId);
+
+      if (!booking) {
+        res.status(404).json({
+          message: "Booking not found",
+          bookingId: body.bookingId,
+          hint: "Verifica que el enlace /feedback/:id use el ID real de bookings.id o un ID alterno registrado (zapier/hubspot).",
+        });
         return;
       }
 
       const { data, error } = await supabase
         .from("feedback")
         .insert({
-          booking_id: body.bookingId,
+          booking_id: booking.id,
           rating: body.rating,
           comment: body.comment ?? null,
           improvement: body.improvement ?? null,
@@ -851,7 +864,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const payload = {
         id: data.id,
-        bookingId: body.bookingId,
+        bookingId: booking.id,
+        bookingRef: body.bookingId,
         rating: body.rating,
         comment: body.comment ?? null,
         improvement: body.improvement ?? null,
