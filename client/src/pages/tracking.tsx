@@ -57,12 +57,6 @@ function saveDeviceId(deviceId: string) {
   localStorage.setItem("tracking_device_id", deviceId);
 }
 
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value.trim(),
-  );
-}
-
 export default function TrackingPage() {
   const [, params] = useRoute("/reserva/:id");
   const routeBookingId = params?.id ?? "";
@@ -103,6 +97,10 @@ export default function TrackingPage() {
     const hasPlate = Boolean(parseAssignedPlate(booking.notes));
     return hasVehicle && hasPlate;
   }, [booking]);
+
+  const tripStatus = trip?.status ?? "pending";
+  const isTrackingActive = tripStatus === "in_progress";
+  const isTripCompleted = tripStatus === "completed";
 
   const loadData = async () => {
     if (!resolvedBookingId) return;
@@ -229,44 +227,7 @@ export default function TrackingPage() {
     document.head.appendChild(script);
   }, [trip, apiKey]);
 
-  const startTrip = async () => {
-    if (!resolvedBookingId) return;
-    if (!resolvedDeviceId || !isUuid(resolvedDeviceId)) {
-      toast({
-        title: "Device ID inválido",
-        description:
-          "Ingresa un device_id real de HyperTrack con formato UUID antes de iniciar el viaje.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await apiRequest("POST", "/api/trips/start", {
-          bookingId: resolvedBookingId,
-          deviceId: resolvedDeviceId,
-          clientShared: true,
-      });
-      const data = await safeJson(res);
-      setTrip(data);
-      saveDeviceId(resolvedDeviceId);
-      toast({ title: "Viaje iniciado", description: "Tracking activo correctamente." });
-    } catch (err: any) {
-      toast({
-        title: "Error al iniciar viaje",
-        description: err?.message || "Intenta nuevamente",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const startLocationWatch = () => {
-    if (!trip?.id) {
-      toast({ title: "Primero inicia el viaje", description: "Aun no hay trip activo." });
-      return;
-    }
+  const beginLocationWatch = (tripId: string) => {
     if (!navigator.geolocation) {
       toast({ title: "GPS no disponible", description: "Tu navegador no soporta geolocalización.", variant: "destructive" });
       return;
@@ -274,7 +235,7 @@ export default function TrackingPage() {
 
     const id = navigator.geolocation.watchPosition(
       async (pos) => {
-        await apiRequest("PATCH", `/api/trips/${trip.id}/location`, {
+        await apiRequest("PATCH", `/api/trips/${tripId}/location`, {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             accuracy: pos.coords.accuracy ?? null,
@@ -293,6 +254,39 @@ export default function TrackingPage() {
     );
     setWatchId(id);
     toast({ title: "Tracking en vivo", description: "Se está enviando ubicación periódicamente." });
+  };
+
+  const startTrip = async () => {
+    if (!resolvedBookingId) return;
+    setLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/trips/start", {
+        bookingId: resolvedBookingId,
+        deviceId: resolvedDeviceId || null,
+        clientShared: true,
+      });
+      const data = await safeJson(res);
+      setTrip(data);
+      if (resolvedDeviceId) saveDeviceId(resolvedDeviceId);
+      beginLocationWatch(data.id);
+      toast({ title: "Viaje iniciado", description: "Tu viaje está en seguimiento en tiempo real." });
+    } catch (err: any) {
+      toast({
+        title: "Error al iniciar viaje",
+        description: err?.message || "Intenta nuevamente",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startLocationWatch = () => {
+    if (!trip?.id) {
+      toast({ title: "Primero inicia el viaje", description: "Aún no hay viaje activo." });
+      return;
+    }
+    beginLocationWatch(trip.id);
   };
 
   const completeTrip = async () => {
@@ -318,6 +312,24 @@ export default function TrackingPage() {
     }
   };
 
+  const shareJourney = async () => {
+    const shareUrl = `${window.location.origin}/reserva/${resolvedBookingId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Seguimiento de viaje CocoLuxe",
+          text: "Comparte este enlace para ver mi viaje en tiempo real.",
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Enlace copiado", description: "Comparte el enlace con quien quieras." });
+      }
+    } catch (error) {
+      // Evita ruido cuando el usuario cancela el diálogo nativo de share.
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-28 space-y-6">
       <Card className="glass-panel border-white/10">
@@ -339,16 +351,16 @@ export default function TrackingPage() {
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-wider text-gray-400">
-              HyperTrack Device ID (UUID real)
+              Identificador de sesión (opcional)
             </label>
             <Input
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
-              placeholder="Ej: 1f9eb422-e51a-495a-8759-47f0f77d1d0b"
+              placeholder="Opcional (ej: device interno o referencia externa)"
               className="bg-void/50 border-white/10 text-white"
             />
             <p className="text-xs text-gray-500">
-              Usa un device_id real registrado en HyperTrack. Este valor se guarda en tu navegador.
+              Si lo completas, se guarda como metadato técnico del viaje. Si no, puedes iniciar el viaje igual.
             </p>
           </div>
 
@@ -369,6 +381,26 @@ export default function TrackingPage() {
               )}
             </div>
           )}
+
+          <div className="rounded-lg border border-white/10 bg-void/40 p-3">
+            {!bookingHasAssignment ? (
+              <p className="text-amber-200 text-sm">
+                Estado 1 - Reserva confirmada. Tu vehículo será confirmado antes de la fecha de tu servicio.
+              </p>
+            ) : isTripCompleted ? (
+              <p className="text-emerald-300 text-sm">
+                Estado 4 - Viaje completado. Gracias por viajar con CocoLuxe.
+              </p>
+            ) : isTrackingActive ? (
+              <p className="text-coco-gold text-sm">
+                Estado 3 - Tracking activo. Tu ubicación se está transmitiendo en tiempo real.
+              </p>
+            ) : (
+              <p className="text-sky-300 text-sm">
+                Estado 2 - Vehículo asignado. Ya puedes iniciar tu viaje.
+              </p>
+            )}
+          </div>
 
           {trip && (
             <div className="text-sm text-gray-300 space-y-1 border-t border-white/10 pt-3">
@@ -415,15 +447,28 @@ export default function TrackingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={startTrip} disabled={loading || !booking || !resolvedDeviceId || !bookingHasAssignment}>
+            <Button onClick={startTrip} disabled={loading || !booking || !bookingHasAssignment || isTrackingActive}>
               Iniciar mi viaje
             </Button>
-            <Button onClick={startLocationWatch} variant="outline" disabled={!trip || loading}>
+            <Button onClick={startLocationWatch} variant="outline" disabled={!trip || loading || isTripCompleted}>
               Activar GPS en vivo
             </Button>
-            <Button onClick={completeTrip} variant="secondary" disabled={!trip || loading}>
-              Marcar como completado
+            <Button onClick={shareJourney} variant="outline" disabled={!trip || !isTrackingActive}>
+              Compartir viaje
             </Button>
+            <Button onClick={completeTrip} variant="secondary" disabled={!trip || loading || isTripCompleted}>
+              Llegué
+            </Button>
+            {isTripCompleted && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.location.href = `/feedback/${resolvedBookingId}`;
+                }}
+              >
+                Dejar encuesta
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -85,7 +85,10 @@ export default function Booking() {
         }
         if (data.vehicleType) form.setValue("vehicleType", data.vehicleType);
         if (data.serviceType) form.setValue("serviceType", data.serviceType as "one_way" | "round_trip");
-        if (data.estimatedPrice) setEstimatedPrice(data.estimatedPrice);
+        if (data.estimatedPrice) {
+          setEstimatedPrice(data.estimatedPrice);
+          form.setValue("estimatedPrice", String(data.estimatedPrice));
+        }
         if (data.pickupDate) form.setValue("pickupDate", data.pickupDate);
         
         // Limpiar sessionStorage después de leer
@@ -116,6 +119,9 @@ export default function Booking() {
     const v = vehicles.find((x: any) => x.id === selectedVehicleId);
     if (!v) return;
     form.setValue("vehicleType", v.type);
+    const recalculatedPrice = calculatePrice(form.getValues("serviceType") || "one_way", selectedVehicleId);
+    setEstimatedPrice(recalculatedPrice);
+    form.setValue("estimatedPrice", String(recalculatedPrice));
   }, [selectedVehicleId, vehicles, form]);
 
   const bookingMutation = useMutation({

@@ -154,6 +154,16 @@ export const tourBookings = pgTable("tour_bookings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const feedback = pgTable("feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookingId: text("booking_id").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  improvement: text("improvement"),
+  source: text("source").default("internal"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -216,6 +226,11 @@ export const insertTourBookingSchema = createInsertSchema(tourBookings).omit({
   tourDate: z.coerce.date(),
 });
 
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -233,3 +248,5 @@ export type InsertTourReview = z.infer<typeof insertTourReviewSchema>;
 export type TourReview = typeof tourReviews.$inferSelect;
 export type InsertTourBooking = z.infer<typeof insertTourBookingSchema>;
 export type TourBooking = typeof tourBookings.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Feedback = typeof feedback.$inferSelect;

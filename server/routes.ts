@@ -801,6 +801,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Guardar encuesta post-viaje
+  app.post("/api/feedback", async (req, res) => {
+    const schema = z.object({
+      bookingId: z.string().uuid(),
+      rating: z.number().int().min(1).max(5),
+      comment: z.string().max(500).optional().nullable(),
+      improvement: z.string().max(500).optional().nullable(),
+      source: z.string().optional().nullable(),
+    });
+
+    try {
+      const body = schema.parse(req.body);
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select("id, customer_name, customer_email")
+        .eq("id", body.bookingId)
+        .single();
+
+      if (bookingError || !booking) {
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("feedback")
+        .insert({
+          booking_id: body.bookingId,
+          rating: body.rating,
+          comment: body.comment ?? null,
+          improvement: body.improvement ?? null,
+          source: body.source ?? "internal",
+          created_at: new Date().toISOString(),
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to save feedback", error: error.message });
+        return;
+      }
+
+      const payload = {
+        id: data.id,
+        bookingId: body.bookingId,
+        rating: body.rating,
+        comment: body.comment ?? null,
+        improvement: body.improvement ?? null,
+        source: body.source ?? "internal",
+        customerName: booking.customer_name,
+        customerEmail: booking.customer_email,
+        createdAt: data.created_at ?? new Date().toISOString(),
+      };
+      await emitAutomationEvent("feedback.created", payload);
+      res.status(201).json(payload);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid feedback payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to save feedback" });
+      }
+    }
+  });
+
   // Update booking status
   app.patch("/api/bookings/:id/status", async (req, res) => {
     try {

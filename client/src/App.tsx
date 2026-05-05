@@ -12,6 +12,7 @@ import Contact from "@/pages/contact";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SecretAdmin from "@/pages/secret-admin";
 import TrackingPage from "@/pages/tracking";
+import FeedbackPage from "@/pages/feedback";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { useSecretCode } from "@/hooks/use-secret-code";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/tracking" component={TrackingPage} />
       <Route path="/reserva/:id" component={TrackingPage} />
+      <Route path="/feedback/:id" component={FeedbackPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/cderf" component={SecretAdmin} />
       <Route component={NotFound} />
