@@ -568,21 +568,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const mapped = mapBookingRow(data);
 
+      const parsePlateFromNotes = (value: unknown) => {
+        const text = String(value ?? "");
+        const match = text.match(/(?:^|\n)\s*plate\s*:\s*([^\n]+)/i);
+        return match?.[1]?.trim() || "";
+      };
+
+      const previousPlate = parsePlateFromNotes(previousRow.notes);
+      const nextPlate = parsePlateFromNotes(data.notes);
+
       const hadVehicleBefore = Boolean(previousRow.vehicle_id || previousRow.vehicle_type);
       const hasVehicleNow = Boolean(data.vehicle_id || data.vehicle_type);
       const justAssigned = !hadVehicleBefore && hasVehicleNow;
+      const vehicleChanged =
+        String(previousRow.vehicle_id ?? "") !== String(data.vehicle_id ?? "") ||
+        String(previousRow.vehicle_type ?? "") !== String(data.vehicle_type ?? "");
+      const driverChanged = String(previousRow.driver_id ?? "") !== String(data.driver_id ?? "");
+      const plateChanged = previousPlate !== nextPlate;
+      const hasAssignmentDataNow = hasVehicleNow || Boolean(nextPlate) || Boolean(data.driver_id);
+      const assignmentChanged = hasAssignmentDataNow && (justAssigned || vehicleChanged || driverChanged || plateChanged);
 
-      if (justAssigned) {
+      if (assignmentChanged) {
         await emitAutomationEvent("booking.vehicle_assigned", {
           ...mapped,
-          plate: body.plate ?? null,
+          plate: nextPlate || null,
         });
       }
 
       res.json({
         ...mapped,
-        plate: body.plate ?? null,
-        assignmentEventTriggered: justAssigned,
+        plate: nextPlate || null,
+        assignmentEventTriggered: assignmentChanged,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
