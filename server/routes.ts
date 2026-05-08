@@ -125,6 +125,102 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#039;");
 }
 
+function normalizeFlightNumber(input: string) {
+  return input.replace(/\s+/g, "").toUpperCase();
+}
+
+function validateFlightNumber(input: string) {
+  // Formato habitual: AA123, B61234, UX089
+  return /^[A-Z0-9]{2,3}\d{1,4}$/.test(input);
+}
+
+async function verifyFlightWithAviationStack(args: { flightNumber: string; flightDate?: string }) {
+  const apiKey = String(process.env.AVIATIONSTACK_API_KEY || "").trim();
+  if (!apiKey) {
+    return {
+      provider: "none",
+      verified: false,
+      reason: "AVIATIONSTACK_API_KEY no configurada",
+      flightNumber: args.flightNumber,
+      status: null,
+      departure: null,
+      arrival: null,
+      raw: null,
+    };
+  }
+
+  const params = new URLSearchParams();
+  params.set("access_key", apiKey);
+  params.set("flight_iata", args.flightNumber);
+  if (args.flightDate) params.set("flight_date", args.flightDate);
+
+  const url = `http://api.aviationstack.com/v1/flights?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const txt = await response.text().catch(() => "");
+    throw new Error(`AviationStack error ${response.status}: ${txt.slice(0, 180)}`);
+  }
+
+  const body: any = await response.json();
+  const candidates: any[] = Array.isArray(body?.data) ? body.data : [];
+  const bestMatch =
+    candidates.find((row) => normalizeFlightNumber(String(row?.flight?.iata || "")) === args.flightNumber) ||
+    candidates[0] ||
+    null;
+
+  if (!bestMatch) {
+    return {
+      provider: "aviationstack",
+      verified: false,
+      reason: "Vuelo no encontrado",
+      flightNumber: args.flightNumber,
+      status: null,
+      departure: null,
+      arrival: null,
+      raw: null,
+    };
+  }
+
+  return {
+    provider: "aviationstack",
+    verified: true,
+    reason: null,
+    flightNumber: args.flightNumber,
+    status: bestMatch?.flight_status ?? null,
+    airline: {
+      name: bestMatch?.airline?.name ?? null,
+      iata: bestMatch?.airline?.iata ?? null,
+      icao: bestMatch?.airline?.icao ?? null,
+    },
+    departure: {
+      airport: bestMatch?.departure?.airport ?? null,
+      iata: bestMatch?.departure?.iata ?? null,
+      terminal: bestMatch?.departure?.terminal ?? null,
+      gate: bestMatch?.departure?.gate ?? null,
+      scheduled: bestMatch?.departure?.scheduled ?? null,
+      estimated: bestMatch?.departure?.estimated ?? null,
+      actual: bestMatch?.departure?.actual ?? null,
+      delayMinutes: bestMatch?.departure?.delay ?? null,
+    },
+    arrival: {
+      airport: bestMatch?.arrival?.airport ?? null,
+      iata: bestMatch?.arrival?.iata ?? null,
+      terminal: bestMatch?.arrival?.terminal ?? null,
+      gate: bestMatch?.arrival?.gate ?? null,
+      baggage: bestMatch?.arrival?.baggage ?? null,
+      scheduled: bestMatch?.arrival?.scheduled ?? null,
+      estimated: bestMatch?.arrival?.estimated ?? null,
+      actual: bestMatch?.arrival?.actual ?? null,
+      delayMinutes: bestMatch?.arrival?.delay ?? null,
+    },
+    raw: {
+      live: bestMatch?.live ?? null,
+      flightDate: bestMatch?.flight_date ?? null,
+      flight: bestMatch?.flight ?? null,
+    },
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   registerBlogRoutes(app);
 
@@ -223,6 +319,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).send(html);
     } catch (e) {
       res.status(500).send("Error generando knowledge base.");
+    }
+  });
+
+  // Verificar número de vuelo (útil para reservas de aeropuerto)
+  app.get("/api/flights/verify", async (req, res) => {
+    const querySchema = z.object({
+      flightNumber: z.string().min(3),
+      // YYYY-MM-DD (opcional, mejora precisión)
+      flightDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    });
+
+    try {
+      const parsed = querySchema.parse(req.query);
+      const normalized = normalizeFlightNumber(parsed.flightNumber);
+
+      if (!validateFlightNumber(normalized)) {
+        res.status(400).json({
+          message: "Formato de vuelo inválido. Usa algo como AA123, B61234 o UX089.",
+        });
+        return;
+      }
+
+      const result = await verifyFlightWithAviationStack({
+        flightNumber: normalized,
+        flightDate: parsed.flightDate,
+      });
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Parámetros inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "No se pudo verificar el vuelo" });
+      }
     }
   });
 
