@@ -70,6 +70,22 @@ const generateBodySchema = z.object({
   force: z.boolean().optional(),
 });
 
+const upsertBlogPostSchema = z.object({
+  title: z.string().min(10).max(180),
+  slug: z.string().min(3).max(100).optional(),
+  excerpt: z.string().max(400).optional().nullable(),
+  contentMarkdown: z.string().optional().nullable(),
+  contentHtml: z.string().min(50),
+  coverImageUrl: z.string().url().optional().nullable(),
+  metaTitle: z.string().max(90).optional().nullable(),
+  metaDescription: z.string().max(200).optional().nullable(),
+  canonicalUrl: z.string().url().optional().nullable(),
+  focusKeyword: z.string().max(120).optional().nullable(),
+  status: z.enum(["draft", "scheduled", "published", "failed"]).optional(),
+  publishAt: z.string().optional().nullable(),
+  publishedAt: z.string().optional().nullable(),
+});
+
 function mapBlogPost(row: BlogPostRow): BlogPostDto {
   return {
     id: row.id,
@@ -274,6 +290,21 @@ async function uniqueSlug(baseSlug: string) {
   }
 }
 
+async function uniqueSlugForUpdate(baseSlug: string, currentId: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("Supabase admin no está configurado en el servidor");
+
+  let slug = baseSlug;
+  let suffix = 1;
+  while (true) {
+    const { data, error } = await supabase.from("blog_posts").select("id").eq("slug", slug).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data || data.id === currentId) return slug;
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+}
+
 async function hasPostPublishedOnDate(dateIso: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error("Supabase admin no está configurado en el servidor");
@@ -428,7 +459,7 @@ export function startBlogAutopublishScheduler() {
   if (blogSchedulerStarted) return;
   blogSchedulerStarted = true;
 
-  const enabled = String(process.env.BLOG_AUTOPUBLISH_ENABLED || "true").toLowerCase() !== "false";
+  const enabled = String(process.env.BLOG_AUTOPUBLISH_ENABLED || "false").toLowerCase() !== "false";
   if (!enabled) return;
 
   const timezone = String(process.env.BLOG_AUTOPUBLISH_TIMEZONE || "America/Santo_Domingo");
@@ -500,7 +531,7 @@ export function registerBlogRoutes(app: Express) {
         .object({
           page: z.coerce.number().int().min(1).optional(),
           limit: z.coerce.number().int().min(1).max(50).optional(),
-          status: z.enum(["draft", "scheduled", "published", "failed"]).optional(),
+          status: z.enum(["all", "draft", "scheduled", "published", "failed"]).optional(),
         })
         .parse(req.query);
 
@@ -510,13 +541,18 @@ export function registerBlogRoutes(app: Express) {
       const to = from + limit - 1;
       const status = query.status || "published";
 
-      const { data, count, error } = await supabase
+      let dbQuery = supabase
         .from("blog_posts")
         .select("*", { count: "exact" })
-        .eq("status", status)
         .order("published_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .range(from, to);
+
+      if (status !== "all") {
+        dbQuery = dbQuery.eq("status", status);
+      }
+
+      const { data, count, error } = await dbQuery;
 
       if (error) {
         res.status(500).json({ message: "Failed to fetch blog posts", error: error.message });
@@ -583,6 +619,146 @@ export function registerBlogRoutes(app: Express) {
       const message = error?.message || "Failed to generate blog post";
       await notifyBlogFailure(message);
       res.status(500).json({ message: "Failed to generate blog post", error: message });
+    }
+  });
+
+  app.post("/api/blog/posts", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = upsertBlogPostSchema.parse(req.body || {});
+      const normalizedSlug = slugify(body.slug || body.title) || `blog-${Date.now()}`;
+      const slug = await uniqueSlug(normalizedSlug);
+      const nowIso = new Date().toISOString();
+      const status = body.status || "draft";
+      const publishedAt = status === "published" ? body.publishedAt || nowIso : null;
+      const canonicalUrl = body.canonicalUrl || `${getBaseUrl()}/blog/${slug}`;
+      const schemaJson =
+        status === "published"
+          ? buildArticleSchema({
+              title: body.title,
+              excerpt: body.excerpt || "",
+              slug,
+              publishedAtIso: publishedAt || nowIso,
+            })
+          : null;
+
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .insert({
+          title: body.title,
+          slug,
+          excerpt: body.excerpt ?? null,
+          content_markdown: body.contentMarkdown ?? null,
+          content_html: body.contentHtml,
+          cover_image_url: body.coverImageUrl ?? null,
+          meta_title: body.metaTitle ?? null,
+          meta_description: body.metaDescription ?? null,
+          canonical_url: canonicalUrl,
+          focus_keyword: body.focusKeyword ?? null,
+          schema_json: schemaJson,
+          status,
+          publish_at: body.publishAt ?? null,
+          published_at: publishedAt,
+          published_day: publishedAt ? publishedAt.slice(0, 10) : null,
+          source: "manual_dashboard",
+          ai_model: null,
+          tokens_used: null,
+          generation_error: null,
+          updated_at: nowIso,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to create blog post", error: error.message });
+        return;
+      }
+      res.status(201).json(mapBlogPost(data as BlogPostRow));
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid blog post payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create blog post" });
+      }
+    }
+  });
+
+  app.patch("/api/blog/posts/:id", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = upsertBlogPostSchema.partial().parse(req.body || {});
+      const nowIso = new Date().toISOString();
+      const update: Record<string, unknown> = { updated_at: nowIso };
+
+      if (body.title !== undefined) update.title = body.title;
+      if (body.excerpt !== undefined) update.excerpt = body.excerpt ?? null;
+      if (body.contentMarkdown !== undefined) update.content_markdown = body.contentMarkdown ?? null;
+      if (body.contentHtml !== undefined) update.content_html = body.contentHtml;
+      if (body.coverImageUrl !== undefined) update.cover_image_url = body.coverImageUrl ?? null;
+      if (body.metaTitle !== undefined) update.meta_title = body.metaTitle ?? null;
+      if (body.metaDescription !== undefined) update.meta_description = body.metaDescription ?? null;
+      if (body.canonicalUrl !== undefined) update.canonical_url = body.canonicalUrl ?? null;
+      if (body.focusKeyword !== undefined) update.focus_keyword = body.focusKeyword ?? null;
+      if (body.publishAt !== undefined) update.publish_at = body.publishAt ?? null;
+
+      if (body.slug !== undefined || body.title !== undefined) {
+        const normalizedSlug = slugify(body.slug || body.title || `${Date.now()}`) || `blog-${Date.now()}`;
+        update.slug = await uniqueSlugForUpdate(normalizedSlug, req.params.id);
+      }
+
+      if (body.status !== undefined) {
+        update.status = body.status;
+        const publishedAt = body.status === "published" ? body.publishedAt || nowIso : null;
+        update.published_at = publishedAt;
+        update.published_day = publishedAt ? publishedAt.slice(0, 10) : null;
+      }
+
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .update(update)
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update blog post", error: error.message });
+        return;
+      }
+      res.json(mapBlogPost(data as BlogPostRow));
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid blog post payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update blog post" });
+      }
+    }
+  });
+
+  app.delete("/api/blog/posts/:id", async (req, res) => {
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+      const { error } = await supabase.from("blog_posts").delete().eq("id", req.params.id);
+      if (error) {
+        res.status(500).json({ message: "Failed to delete blog post", error: error.message });
+        return;
+      }
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete blog post" });
     }
   });
 

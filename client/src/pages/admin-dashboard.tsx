@@ -24,7 +24,8 @@ import {
   MessageCircle,
   Calendar,
   Filter,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +36,20 @@ import type { Tour, Vehicle, Testimonial, Booking, TourBooking } from '@shared/s
 import { COMPANY_INFO } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+
+type BlogPost = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  contentHtml: string;
+  coverImageUrl: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  focusKeyword: string | null;
+  status: 'draft' | 'scheduled' | 'published' | 'failed';
+  publishedAt: string | null;
+};
 
 // Componentes de formularios fuera del componente principal para evitar re-renders
 const TourForm = React.memo(({ 
@@ -557,6 +572,18 @@ export default function AdminDashboard() {
   });
   const [bookingType, setBookingType] = useState<'transport' | 'tours'>('transport');
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
+  const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null | undefined>(null);
+  const [blogForm, setBlogForm] = useState({
+    title: '',
+    slug: '',
+    excerpt: '',
+    contentHtml: '<h1></h1>\n<p></p>',
+    coverImageUrl: '',
+    metaTitle: '',
+    metaDescription: '',
+    focusKeyword: '',
+    status: 'draft' as 'draft' | 'scheduled' | 'published' | 'failed',
+  });
 
   // Queries
   const { data: tours = [], isLoading: toursLoading } = useQuery({
@@ -599,6 +626,15 @@ export default function AdminDashboard() {
       return await res.json();
     },
     staleTime: 30_000,
+  });
+
+  const { data: blogPosts = [], isLoading: blogPostsLoading } = useQuery({
+    queryKey: ['blogPostsAdmin'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/blog/posts?status=all&limit=100');
+      const payload = await res.json();
+      return Array.isArray(payload?.items) ? payload.items : [];
+    },
   });
 
   // Mutations
@@ -740,6 +776,50 @@ export default function AdminDashboard() {
     },
   });
 
+  const createBlogPost = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/blog/posts', data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogPostsAdmin'] });
+      toast({ title: 'Post creado exitosamente' });
+      setEditingBlogPost(null);
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'Error al crear post' });
+    },
+  });
+
+  const updateBlogPost = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest('PATCH', `/api/blog/posts/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogPostsAdmin'] });
+      toast({ title: 'Post actualizado exitosamente' });
+      setEditingBlogPost(null);
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'Error al actualizar post' });
+    },
+  });
+
+  const deleteBlogPost = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('DELETE', `/api/blog/posts/${id}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogPostsAdmin'] });
+      toast({ title: 'Post eliminado exitosamente' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: 'Error al eliminar post' });
+    },
+  });
+
   // Nota: El dashboard es para monitoreo/seguimiento (no para aceptar/denegar).
 
   // Callbacks estables para los formularios usando useRef para evitar re-renders
@@ -798,6 +878,54 @@ export default function AdminDashboard() {
     setEditingTestimonial(null);
   }, []);
 
+  useEffect(() => {
+    if (editingBlogPost === undefined) {
+      setBlogForm({
+        title: '',
+        slug: '',
+        excerpt: '',
+        contentHtml: '<h1></h1>\n<p></p>',
+        coverImageUrl: '',
+        metaTitle: '',
+        metaDescription: '',
+        focusKeyword: '',
+        status: 'draft',
+      });
+      return;
+    }
+    if (editingBlogPost) {
+      setBlogForm({
+        title: editingBlogPost.title || '',
+        slug: editingBlogPost.slug || '',
+        excerpt: editingBlogPost.excerpt || '',
+        contentHtml: editingBlogPost.contentHtml || '<h1></h1>\n<p></p>',
+        coverImageUrl: editingBlogPost.coverImageUrl || '',
+        metaTitle: editingBlogPost.metaTitle || '',
+        metaDescription: editingBlogPost.metaDescription || '',
+        focusKeyword: editingBlogPost.focusKeyword || '',
+        status: editingBlogPost.status || 'draft',
+      });
+    }
+  }, [editingBlogPost]);
+
+  const handleBlogSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      ...blogForm,
+      excerpt: blogForm.excerpt || null,
+      coverImageUrl: blogForm.coverImageUrl || null,
+      metaTitle: blogForm.metaTitle || null,
+      metaDescription: blogForm.metaDescription || null,
+      focusKeyword: blogForm.focusKeyword || null,
+      slug: blogForm.slug || undefined,
+    };
+    if (editingBlogPost) {
+      updateBlogPost.mutate({ id: editingBlogPost.id, data: payload });
+    } else {
+      createBlogPost.mutate(payload);
+    }
+  };
+
   // Usar los formularios que están definidos fuera del componente
 
   return (
@@ -810,7 +938,7 @@ export default function AdminDashboard() {
           </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 bg-glass-dark border-white/10">
+            <TabsList className="grid w-full grid-cols-7 bg-glass-dark border-white/10">
               <TabsTrigger value="bookings" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
                 <Calendar className="h-4 w-4" />
                 Reservas
@@ -834,6 +962,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="tripadvisor" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
                 <ExternalLink className="h-4 w-4" />
                 TripAdvisor
+            </TabsTrigger>
+              <TabsTrigger value="blog" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
+                <FileText className="h-4 w-4" />
+                Blog
             </TabsTrigger>
           </TabsList>
 
@@ -1801,6 +1933,121 @@ export default function AdminDashboard() {
                       </Button>
             </AlertDescription>
           </Alert>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="blog" className="space-y-6">
+              <Card className="glass-panel border-white/10">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-white">Gestión del Blog</CardTitle>
+                      <CardDescription className="text-gray-400">Crea y publica posts manualmente desde el dashboard</CardDescription>
+                    </div>
+                    <Button onClick={() => setEditingBlogPost(undefined)} className="bg-coco-gold text-black hover:bg-coco-gold/90">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuevo Post
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {editingBlogPost !== null ? (
+                    <form onSubmit={handleBlogSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Título</Label>
+                          <Input value={blogForm.title} onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })} className="bg-void/50 border-white/10 text-white" required />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Slug (opcional)</Label>
+                          <Input value={blogForm.slug} onChange={(e) => setBlogForm({ ...blogForm, slug: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-gray-300">Extracto</Label>
+                        <Textarea value={blogForm.excerpt} onChange={(e) => setBlogForm({ ...blogForm, excerpt: e.target.value })} rows={3} className="bg-void/50 border-white/10 text-white" />
+                      </div>
+                      <div>
+                        <Label className="text-gray-300">Contenido HTML</Label>
+                        <Textarea value={blogForm.contentHtml} onChange={(e) => setBlogForm({ ...blogForm, contentHtml: e.target.value })} rows={14} className="bg-void/50 border-white/10 text-white font-mono text-xs" required />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Meta title</Label>
+                          <Input value={blogForm.metaTitle} onChange={(e) => setBlogForm({ ...blogForm, metaTitle: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Meta description</Label>
+                          <Input value={blogForm.metaDescription} onChange={(e) => setBlogForm({ ...blogForm, metaDescription: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Palabra clave</Label>
+                          <Input value={blogForm.focusKeyword} onChange={(e) => setBlogForm({ ...blogForm, focusKeyword: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Imagen portada URL</Label>
+                          <Input value={blogForm.coverImageUrl} onChange={(e) => setBlogForm({ ...blogForm, coverImageUrl: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Estado</Label>
+                          <Select value={blogForm.status} onValueChange={(value: any) => setBlogForm({ ...blogForm, status: value })}>
+                            <SelectTrigger className="bg-void/50 border-white/10 text-white"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-void border-white/10">
+                              <SelectItem value="draft" className="text-white">Borrador</SelectItem>
+                              <SelectItem value="published" className="text-white">Publicado</SelectItem>
+                              <SelectItem value="scheduled" className="text-white">Programado</SelectItem>
+                              <SelectItem value="failed" className="text-white">Fallido</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="submit" disabled={createBlogPost.isPending || updateBlogPost.isPending} className="bg-coco-gold text-black hover:bg-coco-gold/90">
+                          {(createBlogPost.isPending || updateBlogPost.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                          {editingBlogPost ? 'Actualizar' : 'Crear'} Post
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setEditingBlogPost(null)} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+                          Cancelar
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-4">
+                      {blogPostsLoading ? (
+                        <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" /></div>
+                      ) : blogPosts.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400"><p>No hay posts todavía.</p></div>
+                      ) : (
+                        <div className="space-y-3">
+                          {(blogPosts as BlogPost[]).map((post) => (
+                            <Card key={post.id} className="border-white/10 bg-glass-dark">
+                              <CardContent className="p-4 flex items-start justify-between gap-4">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold text-white">{post.title}</h3>
+                                    <Badge className="bg-coco-gold/20 text-coco-gold border-coco-gold/40">{post.status}</Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mb-1">/{post.slug}</p>
+                                  <p className="text-sm text-gray-300">{post.excerpt || 'Sin extracto'}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="ghost" onClick={() => setEditingBlogPost(post)} className="text-white hover:bg-white/10">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => { if (confirm('¿Eliminar este post?')) deleteBlogPost.mutate(post.id); }} className="text-red-500 hover:text-red-700 hover:bg-red-500/10">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
