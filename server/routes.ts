@@ -13,6 +13,7 @@ import { notificationService } from "./notifications";
 import { z } from "zod";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { emitAutomationEvent, getAutomationInboundSecret } from "./zapier";
+import { registerBlogRoutes, startBlogAutopublishScheduler } from "./blog";
 
 function mapBookingRow(row: any) {
   return {
@@ -125,6 +126,8 @@ function escapeHtml(value: unknown) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  registerBlogRoutes(app);
+
   /**
    * Página simple (HTML) para que Lyro (Tidio AI) pueda "aprender" productos/servicios.
    * Ideal para añadir como fuente en Tidio: https://tu-dominio.com/kb/products
@@ -1499,6 +1502,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to compute stats", error: error?.message || String(error) });
     }
   });
+
+  startBlogAutopublishScheduler();
 
   const httpServer = createServer(app);
   return httpServer;

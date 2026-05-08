@@ -13,6 +13,8 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import SecretAdmin from "@/pages/secret-admin";
 import TrackingPage from "@/pages/tracking";
 import FeedbackPage from "@/pages/feedback";
+import BlogPage from "@/pages/blog";
+import BlogPostPage from "@/pages/blog-post";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { useSecretCode } from "@/hooks/use-secret-code";
@@ -29,6 +31,8 @@ function Router() {
       <Route path="/tracking" component={TrackingPage} />
       <Route path="/reserva/:id" component={TrackingPage} />
       <Route path="/feedback/:id" component={FeedbackPage} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/cderf" component={SecretAdmin} />
       <Route component={NotFound} />

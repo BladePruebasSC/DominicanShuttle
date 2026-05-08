@@ -11,6 +11,7 @@ const navigationItems = [
   { href: "/tracking", label: "Tracking" },
   { href: "/fleet", label: "Flota" },
   { href: "/tours", label: "Tours" },
+  { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contacto" },
 ];
 
