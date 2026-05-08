@@ -631,7 +631,7 @@ export default function AdminDashboard() {
   const { data: blogPosts = [], isLoading: blogPostsLoading } = useQuery({
     queryKey: ['blogPostsAdmin'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/blog/posts?status=all&limit=100');
+      const res = await apiRequest('GET', '/api/blog/posts?status=all&limit=50');
       const payload = await res.json();
       return Array.isArray(payload?.items) ? payload.items : [];
     },

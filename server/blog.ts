@@ -530,7 +530,7 @@ export function registerBlogRoutes(app: Express) {
       const query = z
         .object({
           page: z.coerce.number().int().min(1).optional(),
-          limit: z.coerce.number().int().min(1).max(50).optional(),
+          limit: z.coerce.number().int().min(1).max(200).optional(),
           status: z.enum(["all", "draft", "scheduled", "published", "failed"]).optional(),
         })
         .parse(req.query);
