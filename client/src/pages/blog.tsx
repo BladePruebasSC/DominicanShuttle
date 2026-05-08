@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 type BlogPost = {
   id: string;
@@ -19,7 +20,11 @@ type BlogListResponse = {
 
 export default function BlogPage() {
   const { data, isLoading, isError } = useQuery<BlogListResponse>({
-    queryKey: ["/api/blog/posts?limit=12"],
+    queryKey: ["blog-list"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/blog/posts?limit=12");
+      return await res.json();
+    },
   });
 
   return (

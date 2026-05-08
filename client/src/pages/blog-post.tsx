@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 type BlogPost = {
   id: string;
@@ -40,8 +41,12 @@ export default function BlogPostPage() {
   const slug = match ? params.slug : "";
 
   const { data, isLoading, isError } = useQuery<BlogPost>({
-    queryKey: [`/api/blog/posts/${slug}`],
+    queryKey: ["blog-post", slug],
     enabled: Boolean(slug),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/blog/posts/${slug}`);
+      return await res.json();
+    },
   });
 
   useEffect(() => {
