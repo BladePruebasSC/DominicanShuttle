@@ -165,7 +165,14 @@ async function verifyFlightWithAviationStack(args: { flightNumber: string; fligh
 
   const params = new URLSearchParams();
   params.set("access_key", apiKey);
-  params.set("flight_iata", args.flightNumber);
+  // IATA = 2 letras + número (ej. WN2496). ICAO = 3 letras + número (ej. SWA2496). Enviar mal el parámetro suele devolver datos vacíos o errores raros.
+  if (/^[A-Z]{3}\d{1,4}$/.test(args.flightNumber)) {
+    params.set("flight_icao", args.flightNumber);
+  } else if (/^[A-Z]{2}\d{1,4}$/.test(args.flightNumber)) {
+    params.set("flight_iata", args.flightNumber);
+  } else {
+    params.set("flight_iata", args.flightNumber);
+  }
   if (args.flightDate) params.set("flight_date", args.flightDate);
 
   // HTTPS: muchos hosts bloquean salida HTTP y AviationStack recomienda HTTPS.
@@ -209,10 +216,13 @@ async function verifyFlightWithAviationStack(args: { flightNumber: string; fligh
     };
   }
   const candidates: any[] = Array.isArray(body?.data) ? body.data : [];
+  const rowMatchesFlight = (row: any) => {
+    const iata = normalizeFlightNumber(String(row?.flight?.iata || ""));
+    const icao = normalizeFlightNumber(String(row?.flight?.icao || ""));
+    return iata === args.flightNumber || icao === args.flightNumber;
+  };
   const bestMatch =
-    candidates.find((row) => normalizeFlightNumber(String(row?.flight?.iata || "")) === args.flightNumber) ||
-    candidates[0] ||
-    null;
+    candidates.find((row) => rowMatchesFlight(row)) || candidates[0] || null;
 
   if (!bestMatch) {
     return {
@@ -260,9 +270,9 @@ async function verifyFlightWithAviationStack(args: { flightNumber: string; fligh
       delayMinutes: bestMatch?.arrival?.delay ?? null,
     },
     raw: {
-      live: bestMatch?.live ?? null,
       flightDate: bestMatch?.flight_date ?? null,
-      flight: bestMatch?.flight ?? null,
+      flightIata: bestMatch?.flight?.iata ?? null,
+      flightIcao: bestMatch?.flight?.icao ?? null,
     },
   };
 }
@@ -370,41 +380,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Verificar número de vuelo (útil para reservas de aeropuerto)
   app.get("/api/flights/verify", async (req, res) => {
-    const querySchema = z.object({
-      flightNumber: z.string().min(3),
-      flightDate: z
-        .preprocess(
-          (v) => (v === "" || v === undefined || v === null ? undefined : v),
-          z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-        ),
-    });
+    const failVerify = (status: number, body: Record<string, unknown>) => {
+      res.status(status).json(body);
+    };
+
+    const fnRaw = firstQueryString(req.query.flightNumber);
+    const fdRaw = firstQueryString(req.query.flightDate);
+
+    if (!fnRaw || fnRaw.length < 3) {
+      failVerify(400, { message: "Indica un número de vuelo (mínimo 3 caracteres)." });
+      return;
+    }
+
+    const normalized = normalizeFlightNumber(fnRaw);
+    if (!validateFlightNumber(normalized)) {
+      failVerify(400, {
+        message:
+          "Formato de vuelo inválido. Ejemplos: WN2496 (IATA), SWA2496 (ICAO), AA1234, B61234.",
+      });
+      return;
+    }
+
+    // Si mandaron fecha pero no es YYYY-MM-DD, no fallar todo el handler: ignoramos la fecha.
+    const flightDateParam =
+      fdRaw && /^\d{4}-\d{2}-\d{2}$/.test(fdRaw) ? fdRaw : undefined;
 
     try {
-      const parsed = querySchema.parse({
-        flightNumber: firstQueryString(req.query.flightNumber),
-        flightDate: firstQueryString(req.query.flightDate),
+      const result = await verifyFlightWithAviationStack({
+        flightNumber: normalized,
+        flightDate: flightDateParam,
       });
-      const normalized = normalizeFlightNumber(parsed.flightNumber);
-
-      if (!validateFlightNumber(normalized)) {
-        res.status(400).json({
-          message: "Formato de vuelo inválido. Usa algo como AA123, B61234 o UX089.",
-        });
-        return;
-      }
-
       try {
-        const result = await verifyFlightWithAviationStack({
-          flightNumber: normalized,
-          flightDate: parsed.flightDate,
-        });
         res.json(result);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Error al consultar el vuelo";
-        res.status(200).json({
+      } catch {
+        failVerify(200, {
           provider: "aviationstack",
           verified: false,
-          reason: msg,
+          reason: "No se pudo serializar la respuesta del proveedor.",
           flightNumber: normalized,
           status: null,
           departure: null,
@@ -412,12 +424,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           raw: null,
         });
       }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Parámetros inválidos", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "No se pudo verificar el vuelo" });
-      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al consultar el vuelo";
+      res.status(200).json({
+        provider: "aviationstack",
+        verified: false,
+        reason: msg,
+        flightNumber: normalized,
+        status: null,
+        departure: null,
+        arrival: null,
+        raw: null,
+      });
     }
   });
 
