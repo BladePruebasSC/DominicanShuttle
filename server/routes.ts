@@ -148,13 +148,32 @@ function firstQueryString(value: unknown): string | undefined {
   return s === "" ? undefined : s;
 }
 
+/**
+ * La clave del panel de AviationStack debe llegar al **servidor** (p. ej. Render) como variable de entorno.
+ * Nombre recomendado: AVIATIONSTACK_API_KEY. Aceptamos alias por si el nombre difiere.
+ */
+function getAviationStackApiKey(): string {
+  const raw =
+    process.env.AVIATIONSTACK_API_KEY ||
+    process.env.AVIATION_STACK_API_KEY ||
+    process.env.AVIATIONSTACK_ACCESS_KEY ||
+    process.env.APILAYER_ACCESS_KEY ||
+    "";
+  let s = String(raw).trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 async function verifyFlightWithAviationStack(args: { flightNumber: string; flightDate?: string }) {
-  const apiKey = String(process.env.AVIATIONSTACK_API_KEY || "").trim();
+  const apiKey = getAviationStackApiKey();
   if (!apiKey) {
     return {
       provider: "none",
       verified: false,
-      reason: "AVIATIONSTACK_API_KEY no configurada",
+      reason:
+        "El servidor no tiene clave de AviationStack. En Render: Environment → añade AVIATIONSTACK_API_KEY con el mismo valor que copias del panel (sin comillas ni espacios al inicio/fin) → Manual Deploy. El panel “verificado” no rellena Render automáticamente.",
       flightNumber: args.flightNumber,
       status: null,
       departure: null,
@@ -199,7 +218,21 @@ async function verifyFlightWithAviationStack(args: { flightNumber: string; fligh
       typeof body?.error === "string"
         ? body.error
         : body?.error?.info || body?.error?.message || responseText.slice(0, 180);
-    throw new Error(`AviationStack HTTP ${response.status}: ${String(info || "").slice(0, 200)}`);
+    const detail = String(info || "").slice(0, 200);
+    if (response.status === 401 || response.status === 403) {
+      return {
+        provider: "aviationstack",
+        verified: false,
+        reason:
+          "AviationStack rechazó la clave (401/403). Suele pasar si en Render el valor de AVIATIONSTACK_API_KEY no coincide con el del panel (clave vieja tras “Reset Key”, comillas pegadas al copiar, o variable en otro servicio). Revisa Environment en el **mismo** Web Service que sirve la API, guarda y redeploy.",
+        flightNumber: args.flightNumber,
+        status: null,
+        departure: null,
+        arrival: null,
+        raw: detail ? { apiMessage: detail } : null,
+      };
+    }
+    throw new Error(`AviationStack HTTP ${response.status}: ${detail}`);
   }
 
   if (body?.success === false && body?.error) {
