@@ -94,7 +94,7 @@ export default function Contact() {
             <p className="text-sm text-gray-500 mb-3">Respuesta en 2h</p>
             <a
               href={`mailto:${COMPANY_INFO.email}`}
-              className="text-coco-gold hover:text-coco-gold/80 transition font-medium"
+              className="text-coco-gold hover:text-coco-gold/80 transition font-medium text-sm break-words leading-snug px-2"
               data-testid="link-quick-email"
             >
               {COMPANY_INFO.email}
