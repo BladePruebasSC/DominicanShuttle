@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Car, Clock, CheckCircle, CreditCard, Landmark, Wallet, Banknote } from "lucide-react";
+import { CalendarDays, Users, Car, Clock, CheckCircle, CreditCard, Landmark, Wallet, Banknote, Plane, Loader2 } from "lucide-react";
 import { LOCATIONS, SERVICE_TYPES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import { PhoneInput } from "@/components/phone-input";
+import { apiRequest } from "@/lib/queryClient";
 
 // Placeholder SVG como data URI (evita ERR_NAME_NOT_RESOLVED de servicios externos)
 function getVehiclePlaceholder(_text?: string) {
@@ -38,6 +39,9 @@ export default function Booking() {
   const [destinationPlaceId, setDestinationPlaceId] = useState<string>("");
   const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [flightNumber, setFlightNumber] = useState("");
+  const [flightDate, setFlightDate] = useState("");
+  const [flightVerification, setFlightVerification] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -155,6 +159,62 @@ export default function Booking() {
     },
   });
 
+  const verifyFlightMutation = useMutation({
+    mutationFn: async () => {
+      const normalizedFlight = flightNumber.replace(/\s+/g, "").toUpperCase();
+      const params = new URLSearchParams({ flightNumber: normalizedFlight });
+      if (flightDate) params.set("flightDate", flightDate);
+      const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
+      return await res.json();
+    },
+    onSuccess: (result) => {
+      setFlightVerification(result);
+      if (!result?.verified) {
+        toast({
+          variant: "destructive",
+          title: "Vuelo no verificado",
+          description: result?.reason || "No se encontró información para ese vuelo.",
+        });
+        return;
+      }
+
+      // Si llega a PUJ, sugerimos aeropuerto como origen.
+      if (result?.arrival?.iata === "PUJ") {
+        form.setValue("origin", "Punta Cana International Airport (PUJ)");
+      }
+      // Si sale de PUJ, sugerimos aeropuerto como destino.
+      if (result?.departure?.iata === "PUJ") {
+        form.setValue("destination", "Punta Cana International Airport (PUJ)");
+      }
+
+      // Si hay hora estimada/real de llegada, sugerimos pickupDate.
+      const suggestedIso =
+        result?.arrival?.estimated ||
+        result?.arrival?.actual ||
+        result?.departure?.estimated ||
+        result?.departure?.actual ||
+        null;
+      if (suggestedIso) {
+        const d = new Date(suggestedIso);
+        if (!isNaN(d.getTime())) {
+          form.setValue("pickupDate", d as any);
+        }
+      }
+
+      toast({
+        title: "Vuelo verificado",
+        description: `${result?.airline?.name || "Aerolínea"} • Estado: ${result?.status || "N/A"}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "No se pudo verificar el vuelo",
+        description: error?.message || "Intenta de nuevo en unos segundos.",
+      });
+    },
+  });
+
   const onInvalid = () => {
     toast({
       variant: "destructive",
@@ -181,12 +241,20 @@ export default function Booking() {
   const onSubmit = (data: InsertBooking) => {
     const price = estimatedPrice || calculatePrice(data.serviceType, data.vehicleId || selectedVehicleId);
     
+    const flightSummary =
+      flightVerification?.verified
+        ? `\n[Flight Verified] ${flightVerification.flightNumber} | Status: ${flightVerification.status || "N/A"} | Dep: ${flightVerification.departure?.iata || "-"} ${flightVerification.departure?.scheduled || ""} | Arr: ${flightVerification.arrival?.iata || "-"} ${flightVerification.arrival?.estimated || flightVerification.arrival?.scheduled || ""}`
+        : flightNumber
+          ? `\n[Flight Provided] ${flightNumber.replace(/\s+/g, "").toUpperCase()}`
+          : "";
+
     const bookingData = {
       ...data,
       estimatedPrice: price.toString(),
       vehicleId: data.vehicleId || selectedVehicleId || undefined,
       pickupDate: new Date(data.pickupDate),
       returnDate: data.returnDate ? new Date(data.returnDate) : undefined,
+      specialRequests: `${data.specialRequests || ""}${flightSummary}`.trim(),
     };
     
     bookingMutation.mutate(bookingData);
@@ -342,6 +410,55 @@ export default function Booking() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="border border-white/10 rounded-lg p-4 bg-void/40">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Plane className="h-4 w-4 text-coco-gold" />
+                          <h4 className="text-white text-sm font-semibold uppercase tracking-wider">Flight Verification (Optional)</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <Input
+                            value={flightNumber}
+                            onChange={(e) => setFlightNumber(e.target.value)}
+                            placeholder="Ej: AA1234"
+                            className="bg-void/50 border-white/10 text-white placeholder:text-gray-500"
+                          />
+                          <Input
+                            type="date"
+                            value={flightDate}
+                            onChange={(e) => setFlightDate(e.target.value)}
+                            className="bg-void/50 border-white/10 text-white"
+                          />
+                          <Button
+                            type="button"
+                            disabled={!flightNumber || verifyFlightMutation.isPending}
+                            onClick={() => verifyFlightMutation.mutate()}
+                            className="bg-coco-gold text-black hover:bg-coco-gold/90"
+                          >
+                            {verifyFlightMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Plane className="h-4 w-4 mr-2" />
+                            )}
+                            Verificar vuelo
+                          </Button>
+                        </div>
+                        {flightVerification ? (
+                          <div className="mt-3 text-xs text-gray-300 border border-white/10 rounded p-3 bg-void/40">
+                            {flightVerification.verified ? (
+                              <>
+                                <p><strong className="text-white">Resultado:</strong> Verificado</p>
+                                <p><strong className="text-white">Vuelo:</strong> {flightVerification.flightNumber} ({flightVerification.airline?.name || "N/A"})</p>
+                                <p><strong className="text-white">Estado:</strong> {flightVerification.status || "N/A"}</p>
+                                <p><strong className="text-white">Salida:</strong> {flightVerification.departure?.iata || "-"} - {flightVerification.departure?.scheduled || "N/A"}</p>
+                                <p><strong className="text-white">Llegada:</strong> {flightVerification.arrival?.iata || "-"} - {flightVerification.arrival?.estimated || flightVerification.arrival?.scheduled || "N/A"}</p>
+                              </>
+                            ) : (
+                              <p><strong className="text-white">Resultado:</strong> No verificado ({flightVerification.reason || "sin detalles"})</p>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
 
                       {/* Mapa de ruta */}
