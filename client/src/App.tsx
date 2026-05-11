@@ -47,7 +47,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="min-h-screen flex flex-col">
+        <div className="dark min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1">
             <ScrollToTop />

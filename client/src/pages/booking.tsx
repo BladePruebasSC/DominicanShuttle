@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBookingSchema } from "@shared/schema";
@@ -46,6 +46,13 @@ export default function Booking() {
   const [flightVerification, setFlightVerification] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const normalizedFlightNumber = flightNumber.replace(/\s+/g, "").toUpperCase();
+  const isFlightNumberValidClient = /^[A-Z0-9]{2,3}\d{1,4}$/.test(normalizedFlightNumber);
+  const latestFlightInputRef = useRef<{ flightNumber: string; flightDate: string }>({
+    flightNumber: "",
+    flightDate: "",
+  });
 
   const form = useForm<InsertBooking>({
     resolver: zodResolver(insertBookingSchema),
@@ -113,6 +120,13 @@ export default function Booking() {
     }
   }, [form]);
 
+  useEffect(() => {
+    latestFlightInputRef.current = {
+      flightNumber: normalizedFlightNumber,
+      flightDate: flightDate || "",
+    };
+  }, [normalizedFlightNumber, flightDate]);
+
   // Preselección desde /fleet?vehicleId=...
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -164,15 +178,52 @@ export default function Booking() {
     },
   });
 
+  type FlightVerifyVars = { flightNumber: string; flightDate?: string };
   const verifyFlightMutation = useMutation({
-    mutationFn: async () => {
-      const normalizedFlight = flightNumber.replace(/\s+/g, "").toUpperCase();
-      const params = new URLSearchParams({ flightNumber: normalizedFlight });
-      if (flightDate) params.set("flightDate", flightDate);
+    mutationFn: async ({ flightNumber: fn, flightDate: fd }: FlightVerifyVars) => {
+      const flightCacheKey = `flightVerify:${fn}|${fd || ""}`;
+
+      try {
+        const cached = sessionStorage.getItem(flightCacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return parsed;
+        }
+      } catch {
+        // Si sessionStorage está bloqueado o falla, seguimos con la verificación normal.
+      }
+
+      if (!fn || !/^[A-Z0-9]{2,3}\d{1,4}$/.test(fn)) {
+        return {
+          provider: "none",
+          verified: false,
+          reason: "Formato de vuelo inválido.",
+          flightNumber: fn,
+          status: null,
+          departure: null,
+          arrival: null,
+          raw: null,
+        };
+      }
+
+      const params = new URLSearchParams({ flightNumber: fn });
+      if (fd) params.set("flightDate", fd);
       const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
-      return await res.json();
+      const result = await res.json();
+
+      try {
+        sessionStorage.setItem(flightCacheKey, JSON.stringify(result));
+      } catch {
+        // No bloqueamos el flujo si sessionStorage falla.
+      }
+
+      return result;
     },
-    onSuccess: (result) => {
+    onSuccess: (result, vars) => {
+      const latest = latestFlightInputRef.current;
+      if (vars.flightNumber !== latest.flightNumber) return;
+      if ((vars.flightDate || "") !== latest.flightDate) return;
+
       setFlightVerification(result);
       if (!result?.verified) {
         toast({
@@ -219,6 +270,23 @@ export default function Booking() {
       });
     },
   });
+
+  // Si el usuario cambia el vuelo (y ya había un resultado), limpiamos para evitar confusión.
+  // No limpiamos ciegamente porque también restauramos valores desde sessionStorage.
+  useEffect(() => {
+    if (!flightVerification) return;
+    if (flightVerification.flightNumber && flightVerification.flightNumber !== normalizedFlightNumber) {
+      setFlightVerification(null);
+      return;
+    }
+
+    const rawFlightDate = flightVerification?.raw?.flightDate;
+    if (rawFlightDate) {
+      const rawDateOnly = String(rawFlightDate).slice(0, 10);
+      const desiredDateOnly = flightDate ? String(flightDate).slice(0, 10) : "";
+      if (rawDateOnly !== desiredDateOnly) setFlightVerification(null);
+    }
+  }, [flightNumber, flightDate, flightVerification, normalizedFlightNumber]);
 
   const onInvalid = () => {
     toast({
@@ -492,8 +560,13 @@ export default function Booking() {
                           </Popover>
                           <Button
                             type="button"
-                            disabled={!flightNumber || verifyFlightMutation.isPending}
-                            onClick={() => verifyFlightMutation.mutate()}
+                            disabled={!flightNumber || !isFlightNumberValidClient || verifyFlightMutation.isPending}
+                            onClick={() =>
+                              verifyFlightMutation.mutate({
+                                flightNumber: normalizedFlightNumber,
+                                flightDate: flightDate || undefined,
+                              })
+                            }
                             className="bg-coco-gold text-black hover:bg-coco-gold/90"
                           >
                             {verifyFlightMutation.isPending ? (
@@ -505,7 +578,11 @@ export default function Booking() {
                           </Button>
                         </div>
                         {flightVerification ? (
-                          <div className="mt-3 text-xs text-gray-300 border border-white/10 rounded p-3 bg-void/40">
+                          <div
+                            className={`mt-3 text-xs text-gray-300 rounded p-3 bg-void/40 border ${
+                              flightVerification.verified ? "border-coco-gold/30" : "border-white/10"
+                            }`}
+                          >
                             {flightVerification.verified ? (
                               <>
                                 <p><strong className="text-white">Resultado:</strong> Verificado</p>
