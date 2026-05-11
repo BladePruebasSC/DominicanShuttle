@@ -31,6 +31,13 @@ export const bookings = pgTable("bookings", {
   status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "in_progress" | "completed" | "cancelled"
   paymentStatus: text("payment_status").default("pending"), // "pending" | "paid" | "refunded" | "failed"
   paymentMethod: text("payment_method"),
+  flightNumber: text("flight_number"),
+  flightDate: text("flight_date"),
+  flightVerified: boolean("flight_verified").default(false),
+  flightStatus: text("flight_status"),
+  flightAirline: text("flight_airline"),
+  flightDepartureIata: text("flight_departure_iata"),
+  flightArrivalIata: text("flight_arrival_iata"),
   // Integraciones (Zapier / HubSpot)
   leadSource: text("lead_source"),
   zapierLeadId: text("zapier_lead_id"),

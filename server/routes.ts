@@ -38,6 +38,13 @@ function mapBookingRow(row: any) {
     status: row.status,
     paymentStatus: row.payment_status ?? "pending",
     paymentMethod: row.payment_method ?? null,
+    flightNumber: row.flight_number ?? null,
+    flightDate: row.flight_date ?? null,
+    flightVerified: row.flight_verified ?? false,
+    flightStatus: row.flight_status ?? null,
+    flightAirline: row.flight_airline ?? null,
+    flightDepartureIata: row.flight_departure_iata ?? null,
+    flightArrivalIata: row.flight_arrival_iata ?? null,
     vehicleId: row.vehicle_id ?? null,
     driverId: row.driver_id ?? null,
     notes: row.notes ?? null,
@@ -134,6 +141,13 @@ function validateFlightNumber(input: string) {
   return /^[A-Z0-9]{2,3}\d{1,4}$/.test(input);
 }
 
+function firstQueryString(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (Array.isArray(value)) return firstQueryString(value[0]);
+  const s = String(value).trim();
+  return s === "" ? undefined : s;
+}
+
 async function verifyFlightWithAviationStack(args: { flightNumber: string; flightDate?: string }) {
   const apiKey = String(process.env.AVIATIONSTACK_API_KEY || "").trim();
   if (!apiKey) {
@@ -154,14 +168,46 @@ async function verifyFlightWithAviationStack(args: { flightNumber: string; fligh
   params.set("flight_iata", args.flightNumber);
   if (args.flightDate) params.set("flight_date", args.flightDate);
 
-  const url = `http://api.aviationstack.com/v1/flights?${params.toString()}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    const txt = await response.text().catch(() => "");
-    throw new Error(`AviationStack error ${response.status}: ${txt.slice(0, 180)}`);
+  // HTTPS: muchos hosts bloquean salida HTTP y AviationStack recomienda HTTPS.
+  const url = `https://api.aviationstack.com/v1/flights?${params.toString()}`;
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (e) {
+    throw new Error(
+      e instanceof Error ? `No se pudo conectar al proveedor: ${e.message}` : "No se pudo conectar al proveedor",
+    );
   }
 
-  const body: any = await response.json();
+  const responseText = await response.text().catch(() => "");
+  let body: any;
+  try {
+    body = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    throw new Error(`Respuesta inválida del proveedor (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const info =
+      typeof body?.error === "string"
+        ? body.error
+        : body?.error?.info || body?.error?.message || responseText.slice(0, 180);
+    throw new Error(`AviationStack HTTP ${response.status}: ${String(info || "").slice(0, 200)}`);
+  }
+
+  if (body?.success === false && body?.error) {
+    const info = body.error?.info || body.error?.type || "Error del proveedor de vuelos";
+    return {
+      provider: "aviationstack",
+      verified: false,
+      reason: String(info),
+      flightNumber: args.flightNumber,
+      status: null,
+      departure: null,
+      arrival: null,
+      raw: body.error ?? null,
+    };
+  }
   const candidates: any[] = Array.isArray(body?.data) ? body.data : [];
   const bestMatch =
     candidates.find((row) => normalizeFlightNumber(String(row?.flight?.iata || "")) === args.flightNumber) ||
@@ -326,12 +372,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/flights/verify", async (req, res) => {
     const querySchema = z.object({
       flightNumber: z.string().min(3),
-      // YYYY-MM-DD (opcional, mejora precisión)
-      flightDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      flightDate: z
+        .preprocess(
+          (v) => (v === "" || v === undefined || v === null ? undefined : v),
+          z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        ),
     });
 
     try {
-      const parsed = querySchema.parse(req.query);
+      const parsed = querySchema.parse({
+        flightNumber: firstQueryString(req.query.flightNumber),
+        flightDate: firstQueryString(req.query.flightDate),
+      });
       const normalized = normalizeFlightNumber(parsed.flightNumber);
 
       if (!validateFlightNumber(normalized)) {
@@ -341,12 +393,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const result = await verifyFlightWithAviationStack({
-        flightNumber: normalized,
-        flightDate: parsed.flightDate,
-      });
-
-      res.json(result);
+      try {
+        const result = await verifyFlightWithAviationStack({
+          flightNumber: normalized,
+          flightDate: parsed.flightDate,
+        });
+        res.json(result);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Error al consultar el vuelo";
+        res.status(200).json({
+          provider: "aviationstack",
+          verified: false,
+          reason: msg,
+          flightNumber: normalized,
+          status: null,
+          departure: null,
+          arrival: null,
+          raw: null,
+        });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Parámetros inválidos", errors: error.errors });
@@ -545,6 +610,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             special_requests: (validatedData as any).specialRequests ?? null,
             payment_status: (validatedData as any).paymentStatus ?? "pending",
             payment_method: (validatedData as any).paymentMethod ?? null,
+            flight_number: (validatedData as any).flightNumber ?? null,
+            flight_date: (validatedData as any).flightDate ?? null,
+            flight_verified: (validatedData as any).flightVerified ?? false,
+            flight_status: (validatedData as any).flightStatus ?? null,
+            flight_airline: (validatedData as any).flightAirline ?? null,
+            flight_departure_iata: (validatedData as any).flightDepartureIata ?? null,
+            flight_arrival_iata: (validatedData as any).flightArrivalIata ?? null,
             notes: (validatedData as any).notes ?? null,
             lead_source: (validatedData as any).leadSource ?? "dashboard",
             zapier_lead_id: (validatedData as any).zapierLeadId ?? null,

@@ -19,7 +19,8 @@ import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import { PhoneInput } from "@/components/phone-input";
@@ -41,6 +42,7 @@ export default function Booking() {
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [flightNumber, setFlightNumber] = useState("");
   const [flightDate, setFlightDate] = useState("");
+  const [flightDatePopoverOpen, setFlightDatePopoverOpen] = useState(false);
   const [flightVerification, setFlightVerification] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -257,6 +259,13 @@ export default function Booking() {
       vehicleId: data.vehicleId || selectedVehicleId || undefined,
       pickupDate: new Date(data.pickupDate),
       returnDate: data.returnDate ? new Date(data.returnDate) : undefined,
+      flightNumber: flightNumber ? flightNumber.replace(/\s+/g, "").toUpperCase() : undefined,
+      flightDate: flightDate || undefined,
+      flightVerified: Boolean(flightVerification?.verified),
+      flightStatus: flightVerification?.status || undefined,
+      flightAirline: flightVerification?.airline?.name || undefined,
+      flightDepartureIata: flightVerification?.departure?.iata || undefined,
+      flightArrivalIata: flightVerification?.arrival?.iata || undefined,
       specialRequests: `${data.specialRequests || ""}${flightSummary}`.trim(),
     };
     
@@ -427,12 +436,60 @@ export default function Booking() {
                             placeholder="Ej: AA1234"
                             className="bg-void/50 border-white/10 text-white placeholder:text-gray-500"
                           />
-                          <Input
-                            type="date"
-                            value={flightDate}
-                            onChange={(e) => setFlightDate(e.target.value)}
-                            className="bg-void/50 border-white/10 text-white"
-                          />
+                          <Popover open={flightDatePopoverOpen} onOpenChange={setFlightDatePopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={`h-12 w-full justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                  !flightDate && "text-gray-500"
+                                }`}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-coco-gold" />
+                                {flightDate ? (
+                                  format(parseISO(flightDate), "EEEE d MMMM yyyy", { locale: es })
+                                ) : (
+                                  <span>Fecha del vuelo</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={flightDate ? parseISO(flightDate) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    setFlightDate(format(date, "yyyy-MM-dd"));
+                                    setFlightDatePopoverOpen(false);
+                                  }
+                                }}
+                                initialFocus
+                                className="bg-void text-white"
+                                classNames={{
+                                  months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                  month: "space-y-4",
+                                  caption: "flex justify-center pt-1 relative items-center",
+                                  caption_label: "text-sm font-medium text-white",
+                                  nav: "space-x-1 flex items-center",
+                                  nav_button:
+                                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                  nav_button_previous: "absolute left-1",
+                                  nav_button_next: "absolute right-1",
+                                  table: "w-full border-collapse space-y-1",
+                                  head_row: "flex",
+                                  head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                  row: "flex w-full mt-2",
+                                  cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                  day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                  day_selected:
+                                    "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                  day_today: "bg-coco-gold/30 text-white",
+                                  day_outside: "text-gray-500 opacity-50",
+                                  day_disabled: "text-gray-500 opacity-50",
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                           <Button
                             type="button"
                             disabled={!flightNumber || verifyFlightMutation.isPending}
@@ -444,7 +501,7 @@ export default function Booking() {
                             ) : (
                               <Plane className="h-4 w-4 mr-2" />
                             )}
-                            Verificar vuelo
+                            {verifyFlightMutation.isPending ? "Verificando…" : "Verificar vuelo"}
                           </Button>
                         </div>
                         {flightVerification ? (

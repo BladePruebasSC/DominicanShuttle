@@ -568,10 +568,12 @@ export default function AdminDashboard() {
     dateFrom: '',
     dateTo: '',
     vehicleType: 'all',
+    flightVerified: 'all',
     search: '',
   });
   const [bookingType, setBookingType] = useState<'transport' | 'tours'>('transport');
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
+  const [verifyingFlightBookingId, setVerifyingFlightBookingId] = useState<string | null>(null);
   const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null | undefined>(null);
   const [blogForm, setBlogForm] = useState({
     title: '',
@@ -1157,6 +1159,22 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                       <div>
+                        <Label className="text-gray-300 text-xs">Vuelo</Label>
+                        <Select
+                          value={bookingFilters.flightVerified}
+                          onValueChange={(value) => setBookingFilters({ ...bookingFilters, flightVerified: value })}
+                        >
+                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-void border-white/10">
+                            <SelectItem value="all" className="text-white">Todos</SelectItem>
+                            <SelectItem value="verified" className="text-white">Verificado</SelectItem>
+                            <SelectItem value="not_verified" className="text-white">No verificado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <Label className="text-gray-300 text-xs">Desde</Label>
                         <Input
                           type="date"
@@ -1203,6 +1221,13 @@ export default function AdminDashboard() {
                         b.origin.toLowerCase().includes(searchLower) ||
                         b.destination.toLowerCase().includes(searchLower)
                       );
+                    }
+
+                    if (bookingFilters.flightVerified === 'verified') {
+                      filteredBookings = filteredBookings.filter((b: any) => Boolean(b.flightVerified));
+                    }
+                    if (bookingFilters.flightVerified === 'not_verified') {
+                      filteredBookings = filteredBookings.filter((b: any) => !b.flightVerified);
                     }
                     
                     if (bookingFilters.dateFrom) {
@@ -1288,6 +1313,33 @@ export default function AdminDashboard() {
                             window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
                           };
 
+                          const reverifyFlight = async (booking: any) => {
+                            const flightNumber = String(booking.flightNumber || '').trim();
+                            if (!flightNumber) {
+                              toast({ variant: 'destructive', title: 'Esta reserva no tiene número de vuelo' });
+                              return;
+                            }
+                            try {
+                              setVerifyingFlightBookingId(booking.id);
+                              const params = new URLSearchParams({ flightNumber });
+                              if (booking.flightDate) params.set('flightDate', String(booking.flightDate));
+                              const res = await apiRequest('GET', `/api/flights/verify?${params.toString()}`);
+                              const result = await res.json();
+                              await apiRequest('PATCH', `/api/bookings/${booking.id}/assignment`, {
+                                notes: [
+                                  booking.notes || '',
+                                  `[FlightRecheck] ${result.flightNumber || flightNumber} ${result.status || 'N/A'} ${result?.departure?.iata || '-'}->${result?.arrival?.iata || '-'}`
+                                ].filter(Boolean).join('\n'),
+                              });
+                              queryClient.invalidateQueries({ queryKey: ['transportBookings'] });
+                              toast({ title: result?.verified ? 'Vuelo re-verificado' : 'No verificado', description: result?.reason || result?.status || '' });
+                            } catch (error: any) {
+                              toast({ variant: 'destructive', title: 'Error re-verificando vuelo', description: error?.message || 'Intenta nuevamente.' });
+                            } finally {
+                              setVerifyingFlightBookingId(null);
+                            }
+                          };
+
                           return (
                             <Card key={booking.id} className="border-white/10 bg-glass-dark">
                               <CardContent className="p-6">
@@ -1296,6 +1348,11 @@ export default function AdminDashboard() {
                                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                                       <h3 className="font-semibold text-white text-lg">{booking.customerName}</h3>
                                       {getStatusBadge(booking.status)}
+                                      {Boolean((booking as any).flightVerified) && (
+                                        <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/30">
+                                          Vuelo verificado
+                                        </Badge>
+                                      )}
                                       {String((booking as any).paymentStatus ?? 'pending') === 'paid' ? (
                                         <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                                           Pagada
@@ -1332,6 +1389,15 @@ export default function AdminDashboard() {
                                     {booking.returnDate && (
                                       <div className="text-sm text-gray-400 mt-2">
                                         <span className="font-semibold">Regreso:</span> {formatDate(booking.returnDate)}
+                                      </div>
+                                    )}
+                                    {(booking as any).flightNumber && (
+                                      <div className="text-sm text-gray-400 mt-2">
+                                        <span className="font-semibold text-white">Vuelo:</span> {(booking as any).flightNumber}
+                                        {(booking as any).flightStatus ? ` • ${(booking as any).flightStatus}` : ""}
+                                        {(booking as any).flightArrivalIata || (booking as any).flightDepartureIata
+                                          ? ` • ${((booking as any).flightDepartureIata || "-")} -> ${((booking as any).flightArrivalIata || "-")}`
+                                          : ""}
                                       </div>
                                     )}
                                   </div>
@@ -1371,6 +1437,20 @@ export default function AdminDashboard() {
                                   >
                                     <Mail className="h-4 w-4 mr-2" />
                                     Email
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => reverifyFlight(booking)}
+                                    disabled={verifyingFlightBookingId === booking.id}
+                                    className="border-sky-500 text-sky-400 hover:bg-sky-500/10"
+                                  >
+                                    {verifyingFlightBookingId === booking.id ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Calendar className="h-4 w-4 mr-2" />
+                                    )}
+                                    Re-verificar vuelo
                                   </Button>
                                   <Button
                                     size="sm"
