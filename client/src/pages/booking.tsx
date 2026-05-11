@@ -94,6 +94,9 @@ export default function Booking() {
           form.setValue("estimatedPrice", String(data.estimatedPrice));
         }
         if (data.pickupDate) form.setValue("pickupDate", data.pickupDate);
+        if (data.flightNumber) setFlightNumber(String(data.flightNumber));
+        if (data.flightDate) setFlightDate(String(data.flightDate));
+        if (data.flightVerification) setFlightVerification(data.flightVerification);
         
         // Limpiar sessionStorage después de leer
         sessionStorage.removeItem("bookingData");

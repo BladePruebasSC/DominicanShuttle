@@ -16,6 +16,7 @@ import { LOCATIONS, VEHICLE_TYPES, SERVICE_TYPES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
+import { apiRequest } from "@/lib/queryClient";
 
 const bookingFormSchema = z.object({
   origin: z.string().min(1, "Selecciona el origen"),
@@ -38,6 +39,10 @@ export default function BookingWidget() {
   const [destinationPlaceId, setDestinationPlaceId] = useState<string>("");
   const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [flightNumber, setFlightNumber] = useState("");
+  const [flightDate, setFlightDate] = useState("");
+  const [isVerifyingFlight, setIsVerifyingFlight] = useState(false);
+  const [flightVerification, setFlightVerification] = useState<any | null>(null);
   const { toast } = useToast();
 
   const form = useForm<BookingFormData>({
@@ -98,6 +103,46 @@ export default function BookingWidget() {
       });
       // Redirigir a página de booking completa
       window.location.href = "/booking";
+    }
+  };
+
+  const verifyFlight = async () => {
+    const normalized = flightNumber.replace(/\s+/g, "").toUpperCase();
+    if (!normalized) return;
+    setIsVerifyingFlight(true);
+    try {
+      const params = new URLSearchParams({ flightNumber: normalized });
+      if (flightDate) params.set("flightDate", flightDate);
+      const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
+      const result = await res.json();
+      setFlightVerification(result);
+
+      if (result?.verified) {
+        if (result?.arrival?.iata === "PUJ" && !form.getValues("origin")) {
+          form.setValue("origin", "Punta Cana International Airport (PUJ)");
+        }
+        if (result?.departure?.iata === "PUJ" && !form.getValues("destination")) {
+          form.setValue("destination", "Punta Cana International Airport (PUJ)");
+        }
+        toast({
+          title: "Vuelo verificado",
+          description: `${result?.airline?.name || "Aerolínea"} • ${result?.status || "N/A"}`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "No verificado",
+          description: result?.reason || "No se encontró el vuelo.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error verificando vuelo",
+        description: error?.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setIsVerifyingFlight(false);
     }
   };
 
@@ -256,6 +301,45 @@ export default function BookingWidget() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                <div className="border border-white/10 rounded-lg p-4 bg-void/40">
+                  <p className="text-gray-300 text-xs uppercase tracking-wider mb-3">Flight Verification (Optional)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Input
+                      value={flightNumber}
+                      onChange={(e) => setFlightNumber(e.target.value)}
+                      placeholder="Ej: AA1234"
+                      className="bg-void/50 border-white/10 text-white placeholder:text-gray-500"
+                    />
+                    <Input
+                      type="date"
+                      value={flightDate}
+                      onChange={(e) => setFlightDate(e.target.value)}
+                      className="bg-void/50 border-white/10 text-white"
+                    />
+                    <Button
+                      type="button"
+                      onClick={verifyFlight}
+                      disabled={!flightNumber || isVerifyingFlight}
+                      className="bg-coco-gold text-black hover:bg-coco-gold/90"
+                    >
+                      {isVerifyingFlight ? "Verificando..." : "Verificar vuelo"}
+                    </Button>
+                  </div>
+                  {flightVerification ? (
+                    <div className="mt-3 text-xs text-gray-300 border border-white/10 rounded p-3 bg-void/40">
+                      {flightVerification.verified ? (
+                        <>
+                          <p><strong className="text-white">Vuelo:</strong> {flightVerification.flightNumber}</p>
+                          <p><strong className="text-white">Estado:</strong> {flightVerification.status || "N/A"}</p>
+                          <p><strong className="text-white">Llegada:</strong> {flightVerification.arrival?.iata || "-"} {flightVerification.arrival?.estimated || flightVerification.arrival?.scheduled || ""}</p>
+                        </>
+                      ) : (
+                        <p><strong className="text-white">Resultado:</strong> {flightVerification.reason || "No verificado"}</p>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Google Maps Preview con Ruta */}
@@ -673,6 +757,9 @@ export default function BookingWidget() {
                         estimatedPrice,
                         pickupDate: form.getValues("pickupDate"),
                         pickupTime: form.getValues("pickupTime"),
+                        flightNumber: flightNumber.replace(/\s+/g, "").toUpperCase() || undefined,
+                        flightDate: flightDate || undefined,
+                        flightVerification: flightVerification || undefined,
                       };
                       sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
                       window.location.href = "/booking";
