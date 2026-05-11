@@ -74,9 +74,9 @@ export default {
           ring: "var(--sidebar-ring)",
         },
         // Colores de lujo del código de referencia
-        void: "#050505",
-        "coco-gold": "#D4AF37",
-        "glass-dark": "rgba(5, 5, 5, 0.95)",
+        void: "#0A0A0A",
+        "coco-gold": "#C9A84C",
+        "glass-dark": "rgba(13, 27, 42, 0.95)",
       },
       fontFamily: {
         sans: ["Montserrat", "Inter", "system-ui", "sans-serif"],
