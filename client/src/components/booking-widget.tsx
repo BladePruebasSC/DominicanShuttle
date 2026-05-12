@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Search, MapPin, Users, Car, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -245,48 +244,48 @@ export default function BookingWidget() {
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto lg:mx-0 shadow-2xl glass-panel border-white/10" style={{ overflow: 'visible' }}>
-      <CardContent className="bg-transparent p-0" style={{ overflow: 'visible' }}>
+    <Card className="mx-auto w-full max-w-4xl overflow-visible border border-white/10 shadow-2xl glass-panel lg:mx-0" style={{ overflow: 'visible' }}>
+      <CardContent className="overflow-visible bg-transparent p-0" style={{ overflow: 'visible' }}>
         {/* Steps Navigation */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-white/10">
+        <div className="flex flex-wrap items-center justify-center gap-2 border-b border-white/10 p-4 sm:gap-4 sm:p-6">
           <button
             onClick={() => setCurrentStep("trip")}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all sm:px-4 ${
               currentStep === "trip"
-                ? "bg-coco-gold text-black font-bold"
+                ? "bg-coco-gold font-bold text-black"
                 : "bg-void/50 text-gray-400 hover:text-white"
             }`}
           >
             <MapPin className="w-4 h-4" />
             <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Trip</span>
           </button>
-          <div className="hidden sm:block w-8 h-0.5 bg-white/20"></div>
+          <div className="hidden h-0.5 w-8 bg-white/20 sm:block" />
           <button
             onClick={() => {
               if (origin && destination) setCurrentStep("vehicle");
             }}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all sm:px-4 ${
               currentStep === "vehicle"
-                ? "bg-coco-gold text-black font-bold"
+                ? "bg-coco-gold font-bold text-black"
                 : origin && destination
                 ? "bg-void/50 text-gray-400 hover:text-white"
-                : "bg-void/30 text-gray-600 cursor-not-allowed"
+                : "cursor-not-allowed bg-void/30 text-gray-600"
             }`}
           >
             <Car className="w-4 h-4" />
             <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Vehicle</span>
           </button>
-          <div className="hidden sm:block w-8 h-0.5 bg-white/20"></div>
+          <div className="hidden h-0.5 w-8 bg-white/20 sm:block" />
           <button
             onClick={() => {
               if (origin && destination && selectedVehicle) setCurrentStep("passenger");
             }}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all sm:px-4 ${
               currentStep === "passenger"
-                ? "bg-coco-gold text-black font-bold"
+                ? "bg-coco-gold font-bold text-black"
                 : origin && destination && selectedVehicle
                 ? "bg-void/50 text-gray-400 hover:text-white"
-                : "bg-void/30 text-gray-600 cursor-not-allowed"
+                : "cursor-not-allowed bg-void/30 text-gray-600"
             }`}
           >
             <Users className="w-4 h-4" />
@@ -300,8 +299,8 @@ export default function BookingWidget() {
             {currentStep === "trip" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-serif text-white mb-2">1. Route</h3>
-                  <p className="text-gray-400 text-sm mb-4">Pickup & drop-off</p>
+                  <h3 className="mb-2 font-display text-xl text-white">1. Ruta</h3>
+                  <p className="mb-4 text-sm text-gray-400">Origen y destino</p>
                 </div>
 
                 <FormField
@@ -309,25 +308,34 @@ export default function BookingWidget() {
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500">
+                        Tipo de viaje
+                      </FormLabel>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="grid grid-cols-2 gap-4 mb-6"
-                        >
-                          <div className="flex items-center space-x-2 border border-white/10 rounded-lg p-3 hover:border-coco-gold/30 transition-colors">
-                            <RadioGroupItem value="one_way" id="one_way" className="border-coco-gold text-coco-gold" />
-                            <label htmlFor="one_way" className="text-sm font-medium text-gray-300 cursor-pointer flex-1">
-                              One-way
-                            </label>
-                          </div>
-                          <div className="flex items-center space-x-2 border border-white/10 rounded-lg p-3 hover:border-coco-gold/30 transition-colors">
-                            <RadioGroupItem value="round_trip" id="round_trip" className="border-coco-gold text-coco-gold" />
-                            <label htmlFor="round_trip" className="text-sm font-medium text-gray-300 cursor-pointer flex-1">
-                              Round trip
-                            </label>
-                          </div>
-                        </RadioGroup>
+                        <div className="mb-6 flex rounded-lg bg-white/[0.06] p-1 ring-1 ring-coco-gold/20">
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("one_way")}
+                            className={`flex-1 rounded-md py-2.5 text-center text-xs font-semibold transition-all ${
+                              field.value === "one_way"
+                                ? "bg-coco-gold text-black shadow-sm"
+                                : "text-white/60 hover:text-white"
+                            }`}
+                          >
+                            Solo ida
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("round_trip")}
+                            className={`flex-1 rounded-md py-2.5 text-center text-xs font-semibold transition-all ${
+                              field.value === "round_trip"
+                                ? "bg-coco-gold text-black shadow-sm"
+                                : "text-white/60 hover:text-white"
+                            }`}
+                          >
+                            Ida y vuelta
+                          </button>
+                        </div>
                       </FormControl>
                     </FormItem>
                   )}
@@ -660,7 +668,7 @@ export default function BookingWidget() {
             {currentStep === "vehicle" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-serif text-white mb-2">2. Passengers & Bags</h3>
+                  <h3 className="mb-2 font-display text-xl text-white">2. Pasajeros y equipaje</h3>
                   <p className="text-gray-400 text-sm mb-4">We'll recommend the right vehicle</p>
                 </div>
 
@@ -730,7 +738,7 @@ export default function BookingWidget() {
 
                 {/* Vehicle Selection */}
                 <div>
-                  <h4 className="text-white font-serif mb-4">Choose your vehicle *</h4>
+                  <h4 className="mb-4 font-display text-lg text-white">Elige tu vehículo *</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {VEHICLE_TYPES.map((vehicle) => {
                       const isRecommended = vehicle.value === getRecommendedVehicle();
@@ -849,7 +857,7 @@ export default function BookingWidget() {
             {currentStep === "passenger" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-serif text-white mb-2">3. Ready to Book</h3>
+                  <h3 className="mb-2 font-display text-xl text-white">3. Listo para reservar</h3>
                   <p className="text-gray-400 text-sm mb-4">Complete your booking with passenger details.</p>
                 </div>
 

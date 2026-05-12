@@ -122,84 +122,84 @@ const TourForm = React.memo(({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Nombre del Tour</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Nombre del Tour</Label>
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Duración</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Duración</Label>
           <Input
             value={formData.duration}
             onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
             placeholder="Ej: 8 horas"
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
       </div>
 
       <div>
-        <Label className="text-gray-300">Descripción</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Descripción</Label>
         <Textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={4}
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
           required
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Precio (USD)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Precio (USD)</Label>
           <Input
             type="number"
             value={formData.price}
             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Categoría</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Categoría</Label>
           <Select
             value={formData.category}
             onValueChange={(value) => setFormData({ ...formData, category: value })}
           >
-            <SelectTrigger className="bg-void/50 border-white/10 text-white">
+            <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-void border-white/10">
-              <SelectItem value="beach" className="text-white">Playa</SelectItem>
-              <SelectItem value="adventure" className="text-white">Aventura</SelectItem>
-              <SelectItem value="cultural" className="text-white">Cultural</SelectItem>
-              <SelectItem value="nature" className="text-white">Naturaleza</SelectItem>
+            <SelectContent className="border border-black/10 bg-white text-void">
+              <SelectItem value="beach" className="text-void focus:bg-coco-gold/10">Playa</SelectItem>
+              <SelectItem value="adventure" className="text-void focus:bg-coco-gold/10">Aventura</SelectItem>
+              <SelectItem value="cultural" className="text-void focus:bg-coco-gold/10">Cultural</SelectItem>
+              <SelectItem value="nature" className="text-void focus:bg-coco-gold/10">Naturaleza</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div>
-        <Label className="text-gray-300">Incluye (separado por comas)</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Incluye (separado por comas)</Label>
         <Input
           value={formData.includes}
           onChange={(e) => setFormData({ ...formData, includes: e.target.value })}
           placeholder="Transporte, Almuerzo, Guía..."
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
         />
       </div>
       
       <div>
-        <Label className="text-gray-300">URL de Imagen</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">URL de Imagen</Label>
         <Input
           value={formData.imageUrl}
           onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
           placeholder="https://..."
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
         />
       </div>
         
@@ -208,7 +208,7 @@ const TourForm = React.memo(({
           checked={formData.popular}
           onCheckedChange={(checked) => setFormData({ ...formData, popular: checked })}
         />
-        <Label className="text-gray-300">Tour Popular</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Tour Popular</Label>
       </div>
 
       <div className="flex gap-2">
@@ -220,7 +220,7 @@ const TourForm = React.memo(({
           )}
           {tour ? 'Actualizar' : 'Crear'} Tour
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+        <Button type="button" variant="outline" onClick={onCancel} className="border-[#D0D0D0] text-void hover:bg-coco-gold/10 hover:text-void">
           Cancelar
         </Button>
       </div>
@@ -299,28 +299,28 @@ const VehicleForm = React.memo(({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Nombre del Vehículo</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Nombre del Vehículo</Label>
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Tipo</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Tipo</Label>
           <Select
             value={formData.type}
             onValueChange={(value) => setFormData({ ...formData, type: value })}
           >
-            <SelectTrigger className="bg-void/50 border-white/10 text-white">
+            <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-void border-white/10">
-              <SelectItem value="sedan" className="text-white">Sedán</SelectItem>
-              <SelectItem value="suv" className="text-white">SUV</SelectItem>
-              <SelectItem value="van" className="text-white">Van</SelectItem>
-              <SelectItem value="bus" className="text-white">Autobús</SelectItem>
+            <SelectContent className="border border-black/10 bg-white text-void">
+              <SelectItem value="sedan" className="text-void focus:bg-coco-gold/10">Sedán</SelectItem>
+              <SelectItem value="suv" className="text-void focus:bg-coco-gold/10">SUV</SelectItem>
+              <SelectItem value="van" className="text-void focus:bg-coco-gold/10">Van</SelectItem>
+              <SelectItem value="bus" className="text-void focus:bg-coco-gold/10">Autobús</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -328,55 +328,55 @@ const VehicleForm = React.memo(({
         
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Capacidad (pasajeros)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Capacidad (pasajeros)</Label>
           <Input
             type="number"
             value={formData.capacity}
             onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Capacidad de Equipaje</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Capacidad de Equipaje</Label>
           <Input
             type="number"
             value={formData.luggageCapacity}
             onChange={(e) => setFormData({ ...formData, luggageCapacity: parseInt(e.target.value) })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
       </div>
         
       <div>
-        <Label className="text-gray-300">Precio Base (USD)</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Precio Base (USD)</Label>
         <Input
           type="number"
           value={formData.basePrice}
           onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
           required
         />
       </div>
         
       <div>
-        <Label className="text-gray-300">Características (separado por comas)</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Características (separado por comas)</Label>
         <Input
           value={formData.features}
           onChange={(e) => setFormData({ ...formData, features: e.target.value })}
           placeholder="Aire acondicionado, WiFi, Agua gratis..."
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
         />
       </div>
         
       <div>
-        <Label className="text-gray-300">URL de Imagen</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">URL de Imagen</Label>
         <Input
           value={formData.imageUrl}
           onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
           placeholder="https://..."
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
         />
       </div>
         
@@ -385,7 +385,7 @@ const VehicleForm = React.memo(({
           checked={formData.available}
           onCheckedChange={(checked) => setFormData({ ...formData, available: checked })}
         />
-        <Label className="text-gray-300">Disponible</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Disponible</Label>
       </div>
         
       <div className="flex gap-2">
@@ -397,7 +397,7 @@ const VehicleForm = React.memo(({
           )}
           {vehicle ? 'Actualizar' : 'Crear'} Vehículo
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+        <Button type="button" variant="outline" onClick={onCancel} className="border-[#D0D0D0] text-void hover:bg-coco-gold/10 hover:text-void">
           Cancelar
         </Button>
       </div>
@@ -465,7 +465,7 @@ const TestimonialForm = React.memo(({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Nombre del Cliente</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Nombre del Cliente</Label>
           <Input
             value={formData.customerName}
             onChange={(e) => {
@@ -475,53 +475,53 @@ const TestimonialForm = React.memo(({
                 customerInitials: e.target.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
               });
             }}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Iniciales</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Iniciales</Label>
           <Input
             value={formData.customerInitials}
             onChange={(e) => setFormData({ ...formData, customerInitials: e.target.value })}
             maxLength={2}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
       </div>
 
       <div>
-        <Label className="text-gray-300">Reseña</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Reseña</Label>
         <Textarea
           value={formData.review}
           onChange={(e) => setFormData({ ...formData, review: e.target.value })}
           rows={4}
-          className="bg-void/50 border-white/10 text-white"
+          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
           required
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-gray-300">Calificación (1-5)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Calificación (1-5)</Label>
           <Input
             type="number"
             min="1"
             max="5"
             value={formData.rating}
             onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) })}
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
         <div>
-          <Label className="text-gray-300">Fecha</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Fecha</Label>
           <Input
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
             placeholder="Ej: Agosto 2025"
-            className="bg-void/50 border-white/10 text-white"
+            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
             required
           />
         </div>
@@ -532,7 +532,7 @@ const TestimonialForm = React.memo(({
           checked={formData.verified}
           onCheckedChange={(checked) => setFormData({ ...formData, verified: checked })}
         />
-        <Label className="text-gray-300">Verificado</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Verificado</Label>
       </div>
 
       <div className="flex gap-2">
@@ -544,7 +544,7 @@ const TestimonialForm = React.memo(({
           )}
           {testimonial ? 'Actualizar' : 'Crear'} Testimonio
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+        <Button type="button" variant="outline" onClick={onCancel} className="border-[#D0D0D0] text-void hover:bg-coco-gold/10 hover:text-void">
           Cancelar
         </Button>
       </div>
@@ -932,87 +932,102 @@ export default function AdminDashboard() {
 
   return (
     <AuthGate>
-      <div className="min-h-screen bg-void pt-24 pb-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-serif text-white mb-2">Admin Dashboard</h1>
-            <p className="text-gray-400">Gestiona tours, vehículos, testimonios e información de contacto</p>
-          </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7 bg-glass-dark border-white/10">
-              <TabsTrigger value="bookings" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <Calendar className="h-4 w-4" />
+      <div className="min-h-screen bg-coco-panel pt-24 pb-12 px-3 text-void antialiased sm:px-5">
+        <div className="mx-auto max-w-[1600px]">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+            <aside className="shrink-0 lg:sticky lg:top-28 lg:w-56 lg:self-start">
+              <div className="rounded-xl border border-coco-gold/15 bg-coco-navy p-2 shadow-sm">
+                <div className="mb-2 flex items-center gap-2.5 border-b border-white/10 px-2 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-coco-gold font-display text-base font-bold text-void">
+                    C
+                  </div>
+                  <div>
+                    <div className="font-display text-lg font-bold leading-tight text-white">
+                      Coco<span className="text-coco-gold">Luxe</span>
+                    </div>
+                    <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Panel</div>
+                  </div>
+                </div>
+                <TabsList className="flex h-auto w-full flex-row gap-1 overflow-x-auto bg-transparent p-0 lg:flex-col lg:overflow-visible">
+              <TabsTrigger value="bookings" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <Calendar className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
                 Reservas
               </TabsTrigger>
-              <TabsTrigger value="tours" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <MapPin className="h-4 w-4" />
+              <TabsTrigger value="tours" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <MapPin className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
               Tours
             </TabsTrigger>
-              <TabsTrigger value="vehicles" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <Car className="h-4 w-4" />
+              <TabsTrigger value="vehicles" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <Car className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
               Vehículos
             </TabsTrigger>
-              <TabsTrigger value="testimonials" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <Star className="h-4 w-4" />
+              <TabsTrigger value="testimonials" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <Star className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
                 Testimonios
               </TabsTrigger>
-              <TabsTrigger value="contact" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <Phone className="h-4 w-4" />
+              <TabsTrigger value="contact" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <Phone className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
                 Contacto
               </TabsTrigger>
-              <TabsTrigger value="tripadvisor" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <ExternalLink className="h-4 w-4" />
+              <TabsTrigger value="tripadvisor" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <ExternalLink className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
                 TripAdvisor
             </TabsTrigger>
-              <TabsTrigger value="blog" className="flex items-center gap-2 data-[state=active]:bg-coco-gold data-[state=active]:text-black">
-                <FileText className="h-4 w-4" />
+              <TabsTrigger value="blog" className="nav-dash-trigger group flex shrink-0 items-center gap-2 rounded-lg border-0 px-3 py-2.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white data-[state=active]:bg-coco-gold/15 data-[state=active]:text-coco-gold lg:w-full lg:justify-start data-[state=active]:lg:border-l-[3px] data-[state=active]:lg:border-coco-gold data-[state=active]:lg:bg-coco-gold/10 data-[state=active]:lg:pl-[9px]">
+                <FileText className="h-4 w-4 shrink-0 opacity-70 group-data-[state=active]:opacity-100" />
                 Blog
             </TabsTrigger>
           </TabsList>
+              </div>
+            </aside>
+            <main className="min-w-0 flex-1 space-y-5">
+              <div className="rounded-xl border border-black/[0.06] bg-white px-5 py-4 shadow-sm">
+                <h1 className="font-display text-2xl font-bold text-void">Panel operativo</h1>
+                <p className="mt-1 text-xs text-coco-mgray">Reservas, transporte, tours, flota, contacto y blog</p>
+              </div>
 
             {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center flex-wrap gap-4">
                     <div>
-                      <CardTitle className="text-white">Gestión de Reservas</CardTitle>
-                      <CardDescription className="text-gray-400">Gestiona y comunícate con los clientes</CardDescription>
+                      <CardTitle className="font-display text-xl text-void">Gestión de Reservas</CardTitle>
+                      <CardDescription className="text-coco-mgray">Gestiona y comunícate con los clientes</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {/* Estadísticas */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <Card className="border-white/10 bg-void/30">
+                    <Card className="relative overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:h-[3px] before:bg-emerald-600">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-white text-base">Transporte</CardTitle>
-                        <CardDescription className="text-gray-400">Resumen del rango seleccionado</CardDescription>
+                        <CardTitle className="font-display text-lg text-void">Transporte</CardTitle>
+                        <CardDescription className="text-coco-mgray">Resumen del rango seleccionado</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0">
                         {statsLoading ? (
-                          <div className="text-gray-400 text-sm">Cargando…</div>
+                          <div className="text-sm text-coco-mgray">Cargando…</div>
                         ) : (
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <div className="text-xs text-gray-400">Total</div>
-                              <div className="text-white font-semibold text-lg">{dashboardStats?.transport?.total ?? 0}</div>
+                              <div className="text-xs text-coco-mgray">Total</div>
+                              <div className="text-void font-semibold text-lg">{dashboardStats?.transport?.total ?? 0}</div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Pagadas</div>
-                              <div className="text-emerald-300 font-semibold text-lg">
+                              <div className="text-xs text-coco-mgray">Pagadas</div>
+                              <div className="text-emerald-700 font-semibold text-lg">
                                 {dashboardStats?.transport?.byPaymentStatus?.paid ?? 0}
                               </div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Confirmadas</div>
-                              <div className="text-white font-semibold text-lg">
+                              <div className="text-xs text-coco-mgray">Confirmadas</div>
+                              <div className="text-void font-semibold text-lg">
                                 {dashboardStats?.transport?.byStatus?.confirmed ?? 0}
                               </div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Ingresos (USD)</div>
+                              <div className="text-xs text-coco-mgray">Ingresos (USD)</div>
                               <div className="text-coco-gold font-semibold text-lg">
                                 ${dashboardStats?.transport?.revenue ?? 0}
                               </div>
@@ -1022,34 +1037,34 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border-white/10 bg-void/30">
+                    <Card className="relative overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:h-[3px] before:bg-violet-600">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-white text-base">Tours</CardTitle>
-                        <CardDescription className="text-gray-400">Resumen del rango seleccionado</CardDescription>
+                        <CardTitle className="font-display text-lg text-void">Tours</CardTitle>
+                        <CardDescription className="text-coco-mgray">Resumen del rango seleccionado</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0">
                         {statsLoading ? (
-                          <div className="text-gray-400 text-sm">Cargando…</div>
+                          <div className="text-sm text-coco-mgray">Cargando…</div>
                         ) : (
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <div className="text-xs text-gray-400">Total</div>
-                              <div className="text-white font-semibold text-lg">{dashboardStats?.tours?.total ?? 0}</div>
+                              <div className="text-xs text-coco-mgray">Total</div>
+                              <div className="text-void font-semibold text-lg">{dashboardStats?.tours?.total ?? 0}</div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Pagadas</div>
-                              <div className="text-violet-300 font-semibold text-lg">
+                              <div className="text-xs text-coco-mgray">Pagadas</div>
+                              <div className="text-violet-700 font-semibold text-lg">
                                 {dashboardStats?.tours?.byPaymentStatus?.paid ?? 0}
                               </div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Confirmadas</div>
-                              <div className="text-white font-semibold text-lg">
+                              <div className="text-xs text-coco-mgray">Confirmadas</div>
+                              <div className="text-void font-semibold text-lg">
                                 {dashboardStats?.tours?.byStatus?.confirmed ?? 0}
                               </div>
                             </div>
                             <div>
-                              <div className="text-xs text-gray-400">Ingresos (USD)</div>
+                              <div className="text-xs text-coco-mgray">Ingresos (USD)</div>
                               <div className="text-coco-gold font-semibold text-lg">
                                 ${dashboardStats?.tours?.revenue ?? 0}
                               </div>
@@ -1067,8 +1082,8 @@ export default function AdminDashboard() {
                       onClick={() => setBookingType('transport')}
                       className={
                         bookingType === 'transport'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
-                          : 'bg-void/40 border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                          : 'border border-black/10 bg-white text-coco-mgray hover:border-coco-gold/40 hover:text-void'
                       }
                     >
                       Transporte
@@ -1079,8 +1094,8 @@ export default function AdminDashboard() {
                       onClick={() => setBookingType('tours')}
                       className={
                         bookingType === 'tours'
-                          ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30'
-                          : 'bg-void/40 border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
+                          ? 'bg-violet-50 text-violet-900 border border-violet-200 hover:bg-violet-100'
+                          : 'border border-black/10 bg-white text-coco-mgray hover:border-coco-gold/40 hover:text-void'
                       }
                     >
                       Tours
@@ -1103,93 +1118,93 @@ export default function AdminDashboard() {
                     return bookingType === 'transport' ? (
                       <>
                   {/* Filtros */}
-                  <div className="mb-6 p-4 bg-void/50 rounded-lg border border-white/10 space-y-4">
+                  <div className="mb-6 space-y-4 rounded-xl border border-black/[0.08] bg-[#FAFAFA] p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <Filter className="h-4 w-4 text-coco-gold" />
-                      <h3 className="text-white font-semibold">Filtros</h3>
+                      <h3 className="text-void font-semibold">Filtros</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                       <div>
-                        <Label className="text-gray-300 text-xs">Buscar</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Buscar</Label>
                         <div className="relative">
-                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-coco-mgray" />
                           <Input
                             placeholder="Nombre, email..."
                             value={bookingFilters.search}
                             onChange={(e) => setBookingFilters({ ...bookingFilters, search: e.target.value })}
-                            className="bg-void/50 border-white/10 text-white pl-8"
+                            className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD] pl-8"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Estado</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Estado</Label>
                         <Select
                           value={bookingFilters.status}
                           onValueChange={(value) => setBookingFilters({ ...bookingFilters, status: value })}
                         >
-                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                          <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-void border-white/10">
-                            <SelectItem value="all" className="text-white">Todos</SelectItem>
-                            <SelectItem value="pending" className="text-white">Pendiente</SelectItem>
-                            <SelectItem value="confirmed" className="text-white">Confirmado</SelectItem>
-                            <SelectItem value="in_progress" className="text-white">En Progreso</SelectItem>
-                            <SelectItem value="completed" className="text-white">Completado</SelectItem>
-                            <SelectItem value="cancelled" className="text-white">Cancelado</SelectItem>
+                          <SelectContent className="border border-black/10 bg-white text-void">
+                            <SelectItem value="all" className="text-void focus:bg-coco-gold/10">Todos</SelectItem>
+                            <SelectItem value="pending" className="text-void focus:bg-coco-gold/10">Pendiente</SelectItem>
+                            <SelectItem value="confirmed" className="text-void focus:bg-coco-gold/10">Confirmado</SelectItem>
+                            <SelectItem value="in_progress" className="text-void focus:bg-coco-gold/10">En Progreso</SelectItem>
+                            <SelectItem value="completed" className="text-void focus:bg-coco-gold/10">Completado</SelectItem>
+                            <SelectItem value="cancelled" className="text-void focus:bg-coco-gold/10">Cancelado</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Tipo de Vehículo</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Tipo de Vehículo</Label>
                         <Select
                           value={bookingFilters.vehicleType}
                           onValueChange={(value) => setBookingFilters({ ...bookingFilters, vehicleType: value })}
                         >
-                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                          <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-void border-white/10">
-                            <SelectItem value="all" className="text-white">Todos</SelectItem>
-                            <SelectItem value="sedan" className="text-white">Sedán</SelectItem>
-                            <SelectItem value="suv" className="text-white">SUV</SelectItem>
-                            <SelectItem value="van" className="text-white">Van</SelectItem>
-                            <SelectItem value="bus" className="text-white">Autobús</SelectItem>
+                          <SelectContent className="border border-black/10 bg-white text-void">
+                            <SelectItem value="all" className="text-void focus:bg-coco-gold/10">Todos</SelectItem>
+                            <SelectItem value="sedan" className="text-void focus:bg-coco-gold/10">Sedán</SelectItem>
+                            <SelectItem value="suv" className="text-void focus:bg-coco-gold/10">SUV</SelectItem>
+                            <SelectItem value="van" className="text-void focus:bg-coco-gold/10">Van</SelectItem>
+                            <SelectItem value="bus" className="text-void focus:bg-coco-gold/10">Autobús</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Vuelo</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Vuelo</Label>
                         <Select
                           value={bookingFilters.flightVerified}
                           onValueChange={(value) => setBookingFilters({ ...bookingFilters, flightVerified: value })}
                         >
-                          <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                          <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-void border-white/10">
-                            <SelectItem value="all" className="text-white">Todos</SelectItem>
-                            <SelectItem value="verified" className="text-white">Verificado</SelectItem>
-                            <SelectItem value="not_verified" className="text-white">No verificado</SelectItem>
+                          <SelectContent className="border border-black/10 bg-white text-void">
+                            <SelectItem value="all" className="text-void focus:bg-coco-gold/10">Todos</SelectItem>
+                            <SelectItem value="verified" className="text-void focus:bg-coco-gold/10">Verificado</SelectItem>
+                            <SelectItem value="not_verified" className="text-void focus:bg-coco-gold/10">No verificado</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Desde</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Desde</Label>
                         <Input
                           type="date"
                           value={bookingFilters.dateFrom}
                           onChange={(e) => setBookingFilters({ ...bookingFilters, dateFrom: e.target.value })}
-                          className="bg-void/50 border-white/10 text-white"
+                          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Hasta</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Hasta</Label>
                         <Input
                           type="date"
                           value={bookingFilters.dateTo}
                           onChange={(e) => setBookingFilters({ ...bookingFilters, dateTo: e.target.value })}
-                          className="bg-void/50 border-white/10 text-white"
+                          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                         />
                       </div>
                     </div>
@@ -1253,7 +1268,7 @@ export default function AdminDashboard() {
                     );
 
                     return filteredBookings.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-coco-mgray">
                         <p>No hay reservas que coincidan con los filtros.</p>
                       </div>
                     ) : (
@@ -1264,7 +1279,7 @@ export default function AdminDashboard() {
                               pending: { label: 'Pendiente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
                               confirmed: { label: 'Confirmado', className: 'bg-green-500/20 text-green-500 border-green-500/30' },
                               in_progress: { label: 'En Progreso', className: 'bg-blue-500/20 text-blue-500 border-blue-500/30' },
-                              completed: { label: 'Completado', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+                              completed: { label: 'Completado', className: 'bg-gray-100 text-void border-gray-200' },
                               cancelled: { label: 'Cancelado', className: 'bg-red-500/20 text-red-500 border-red-500/30' },
                             };
                             const statusInfo = statusMap[status] || statusMap.pending;
@@ -1341,12 +1356,12 @@ export default function AdminDashboard() {
                           };
 
                           return (
-                            <Card key={booking.id} className="border-white/10 bg-glass-dark">
+                            <Card key={booking.id} className="border border-black/[0.06] bg-white shadow-sm">
                               <CardContent className="p-6">
                                 <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                      <h3 className="font-semibold text-white text-lg">{booking.customerName}</h3>
+                                      <h3 className="font-semibold text-void text-lg">{booking.customerName}</h3>
                                       {getStatusBadge(booking.status)}
                                       {Boolean((booking as any).flightVerified) && (
                                         <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/30">
@@ -1368,7 +1383,7 @@ export default function AdminDashboard() {
                                         </Badge>
                                       )}
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-400">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-coco-mgray">
                                       <div className="flex items-center gap-2">
                                         <Mail className="h-4 w-4" />
                                         <span>{booking.customerEmail}</span>
@@ -1387,13 +1402,13 @@ export default function AdminDashboard() {
                                       </div>
                                     </div>
                                     {booking.returnDate && (
-                                      <div className="text-sm text-gray-400 mt-2">
+                                      <div className="text-sm text-coco-mgray mt-2">
                                         <span className="font-semibold">Regreso:</span> {formatDate(booking.returnDate)}
                                       </div>
                                     )}
                                     {(booking as any).flightNumber && (
-                                      <div className="text-sm text-gray-400 mt-2">
-                                        <span className="font-semibold text-white">Vuelo:</span> {(booking as any).flightNumber}
+                                      <div className="text-sm text-coco-mgray mt-2">
+                                        <span className="font-semibold text-void">Vuelo:</span> {(booking as any).flightNumber}
                                         {(booking as any).flightStatus ? ` • ${(booking as any).flightStatus}` : ""}
                                         {(booking as any).flightArrivalIata || (booking as any).flightDepartureIata
                                           ? ` • ${((booking as any).flightDepartureIata || "-")} -> ${((booking as any).flightArrivalIata || "-")}`
@@ -1404,7 +1419,7 @@ export default function AdminDashboard() {
                                   <div className="flex flex-col gap-2">
                                     <div className="text-right">
                                       <div className="text-coco-gold font-bold text-lg">${booking.estimatedPrice} USD</div>
-                                      <div className="text-xs text-gray-400">
+                                      <div className="text-xs text-coco-mgray">
                                         {booking.passengers} pax • {booking.vehicleType} • {booking.serviceType === 'one_way' ? 'Solo ida' : 'Ida y vuelta'}
                                       </div>
                                     </div>
@@ -1412,14 +1427,14 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {booking.specialRequests && (
-                                  <div className="mb-4 p-3 bg-void/50 rounded border border-white/10">
-                                    <p className="text-sm text-gray-300">
-                                      <span className="font-semibold text-white">Solicitudes especiales:</span> {booking.specialRequests}
+                                  <div className="mb-4 rounded-lg border border-black/[0.08] bg-[#FAFAFA] p-3">
+                                    <p className="text-sm text-coco-mgray">
+                                      <span className="font-semibold text-void">Solicitudes especiales:</span> {booking.specialRequests}
                                     </p>
                                   </div>
                                 )}
 
-                                <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
+                                <div className="flex flex-wrap gap-2 border-t border-black/[0.08] pt-4">
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1486,58 +1501,58 @@ export default function AdminDashboard() {
                     ) : (
                       <>
                         {/* Filtros (Tours) */}
-                        <div className="mb-6 p-4 bg-void/50 rounded-lg border border-white/10 space-y-4">
+                        <div className="mb-6 space-y-4 rounded-xl border border-black/[0.08] bg-[#FAFAFA] p-4">
                           <div className="flex items-center gap-2 mb-4">
                             <Filter className="h-4 w-4 text-coco-gold" />
-                            <h3 className="text-white font-semibold">Filtros (Tours)</h3>
+                            <h3 className="text-void font-semibold">Filtros (Tours)</h3>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                              <Label className="text-gray-300 text-xs">Buscar</Label>
+                              <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Buscar</Label>
                               <div className="relative">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-coco-mgray" />
                                 <Input
                                   placeholder="Nombre, email, tour..."
                                   value={bookingFilters.search}
                                   onChange={(e) => setBookingFilters({ ...bookingFilters, search: e.target.value })}
-                                  className="bg-void/50 border-white/10 text-white pl-8"
+                                  className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD] pl-8"
                                 />
                               </div>
                             </div>
                             <div>
-                              <Label className="text-gray-300 text-xs">Estado</Label>
+                              <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Estado</Label>
                               <Select
                                 value={bookingFilters.status}
                                 onValueChange={(value) => setBookingFilters({ ...bookingFilters, status: value })}
                               >
-                                <SelectTrigger className="bg-void/50 border-white/10 text-white">
+                                <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-void border-white/10">
-                                  <SelectItem value="all" className="text-white">Todos</SelectItem>
-                                  <SelectItem value="pending" className="text-white">Pendiente</SelectItem>
-                                  <SelectItem value="confirmed" className="text-white">Confirmado</SelectItem>
-                                  <SelectItem value="completed" className="text-white">Completado</SelectItem>
-                                  <SelectItem value="cancelled" className="text-white">Cancelado</SelectItem>
+                                <SelectContent className="border border-black/10 bg-white text-void">
+                                  <SelectItem value="all" className="text-void focus:bg-coco-gold/10">Todos</SelectItem>
+                                  <SelectItem value="pending" className="text-void focus:bg-coco-gold/10">Pendiente</SelectItem>
+                                  <SelectItem value="confirmed" className="text-void focus:bg-coco-gold/10">Confirmado</SelectItem>
+                                  <SelectItem value="completed" className="text-void focus:bg-coco-gold/10">Completado</SelectItem>
+                                  <SelectItem value="cancelled" className="text-void focus:bg-coco-gold/10">Cancelado</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
                             <div>
-                              <Label className="text-gray-300 text-xs">Desde</Label>
+                              <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Desde</Label>
                               <Input
                                 type="date"
                                 value={bookingFilters.dateFrom}
                                 onChange={(e) => setBookingFilters({ ...bookingFilters, dateFrom: e.target.value })}
-                                className="bg-void/50 border-white/10 text-white"
+                                className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                               />
                             </div>
                             <div>
-                              <Label className="text-gray-300 text-xs">Hasta</Label>
+                              <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Hasta</Label>
                               <Input
                                 type="date"
                                 value={bookingFilters.dateTo}
                                 onChange={(e) => setBookingFilters({ ...bookingFilters, dateTo: e.target.value })}
-                                className="bg-void/50 border-white/10 text-white"
+                                className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                               />
                             </div>
                           </div>
@@ -1579,7 +1594,7 @@ export default function AdminDashboard() {
                             const statusMap: Record<string, { label: string; className: string }> = {
                               pending: { label: 'Pendiente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
                               confirmed: { label: 'Confirmado', className: 'bg-green-500/20 text-green-500 border-green-500/30' },
-                              completed: { label: 'Completado', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+                              completed: { label: 'Completado', className: 'bg-gray-100 text-void border-gray-200' },
                               cancelled: { label: 'Cancelado', className: 'bg-red-500/20 text-red-500 border-red-500/30' },
                             };
                             const statusInfo = statusMap[status] || statusMap.pending;
@@ -1598,18 +1613,18 @@ export default function AdminDashboard() {
                           };
 
                           return filtered.length === 0 ? (
-                            <div className="text-center py-8 text-gray-400">
+                            <div className="text-center py-8 text-coco-mgray">
                               <p>No hay reservas de tours que coincidan con los filtros.</p>
                             </div>
                           ) : (
                             <div className="space-y-4">
                               {filtered.map((tb) => (
-                                <Card key={tb.id} className="border-white/10 bg-glass-dark">
+                                <Card key={tb.id} className="border border-black/[0.06] bg-white shadow-sm">
                                   <CardContent className="p-6">
                                     <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
                                       <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                          <h3 className="font-semibold text-white text-lg">{tb.customerName}</h3>
+                                          <h3 className="font-semibold text-void text-lg">{tb.customerName}</h3>
                                           {getStatusBadge(tb.status)}
                                           {isSameCustomer(tb.customerEmail, tb.customerPhone) && (
                                             <Badge className="bg-coco-gold/10 text-coco-gold border border-coco-gold/30">
@@ -1617,7 +1632,7 @@ export default function AdminDashboard() {
                                             </Badge>
                                           )}
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-300">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-coco-mgray">
                                           <div className="flex items-center gap-2">
                                             <MapPin className="h-4 w-4 text-coco-gold" />
                                             <span><strong>Tour:</strong> {tb.tourName}</span>
@@ -1636,16 +1651,16 @@ export default function AdminDashboard() {
                                           </div>
                                         </div>
                                         {tb.notes && (
-                                          <div className="mt-3 text-sm text-gray-400">
-                                            <strong className="text-gray-300">Notas:</strong> {tb.notes}
+                                          <div className="mt-3 text-sm text-coco-mgray">
+                                            <strong className="text-void">Notas:</strong> {tb.notes}
                                           </div>
                                         )}
                                       </div>
 
                                       <div className="flex flex-col gap-2 min-w-[200px]">
                                         <div className="text-right">
-                                          <p className="text-xs text-gray-400">Estado</p>
-                                          <p className="text-white font-semibold">{tb.status}</p>
+                                          <p className="text-xs text-coco-mgray">Estado</p>
+                                          <p className="text-void font-semibold">{tb.status}</p>
                                         </div>
                                       </div>
                                     </div>
@@ -1664,12 +1679,12 @@ export default function AdminDashboard() {
 
             {/* Tours Tab */}
           <TabsContent value="tours" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white">Gestión de Tours</CardTitle>
-                      <CardDescription className="text-gray-400">Agrega, edita o elimina tours</CardDescription>
+                      <CardTitle className="font-display text-xl text-void">Gestión de Tours</CardTitle>
+                      <CardDescription className="text-coco-mgray">Agrega, edita o elimina tours</CardDescription>
                     </div>
                     <Button onClick={() => setEditingTour(undefined)} className="bg-coco-gold text-black hover:bg-coco-gold/90">
                       <Plus className="h-4 w-4 mr-2" />
@@ -1693,22 +1708,22 @@ export default function AdminDashboard() {
                           <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" />
                       </div>
                       ) : tours.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-coco-mgray">
                           <p>No hay tours aún. Crea tu primer tour.</p>
                       </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {tours.map((tour) => (
-                            <Card key={tour.id} className="border-white/10 bg-glass-dark">
+                            <Card key={tour.id} className="border border-black/[0.06] bg-white shadow-sm">
                               {tour.imageUrl && (
                                 <img src={tour.imageUrl} alt={tour.name} className="w-full h-48 object-cover" />
                               )}
                               <CardContent className="p-4">
                                 <div className="flex justify-between items-start mb-2">
-                                  <h3 className="font-semibold text-white">{tour.name}</h3>
+                                  <h3 className="font-semibold text-void">{tour.name}</h3>
                                   {tour.popular && <Badge className="bg-coco-gold text-black">Popular</Badge>}
                                 </div>
-                                <p className="text-sm text-gray-400 mb-2 line-clamp-2">{tour.description}</p>
+                                <p className="text-sm text-coco-mgray mb-2 line-clamp-2">{tour.description}</p>
                                 <div className="flex justify-between items-center mt-4">
                                   <span className="text-coco-gold font-bold">${tour.price} USD</span>
                                   <div className="flex gap-2">
@@ -1716,7 +1731,7 @@ export default function AdminDashboard() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => setEditingTour(tour)}
-                                      className="text-white hover:bg-white/10"
+                                      className="text-void hover:bg-black/[0.06]"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>
@@ -1747,12 +1762,12 @@ export default function AdminDashboard() {
 
             {/* Vehicles Tab */}
           <TabsContent value="vehicles" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white">Gestión de Vehículos</CardTitle>
-                      <CardDescription className="text-gray-400">Agrega, edita o elimina vehículos</CardDescription>
+                      <CardTitle className="font-display text-xl text-void">Gestión de Vehículos</CardTitle>
+                      <CardDescription className="text-coco-mgray">Agrega, edita o elimina vehículos</CardDescription>
                     </div>
                     <Button onClick={() => setEditingVehicle(undefined)} className="bg-coco-gold text-black hover:bg-coco-gold/90">
                       <Plus className="h-4 w-4 mr-2" />
@@ -1776,19 +1791,19 @@ export default function AdminDashboard() {
                           <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" />
                       </div>
                       ) : vehicles.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-coco-mgray">
                           <p>No hay vehículos aún. Crea tu primer vehículo.</p>
                       </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {vehicles.map((vehicle) => (
-                            <Card key={vehicle.id} className="border-white/10 bg-glass-dark">
+                            <Card key={vehicle.id} className="border border-black/[0.06] bg-white shadow-sm">
                               {vehicle.imageUrl && (
                                 <img src={vehicle.imageUrl} alt={vehicle.name} className="w-full h-48 object-cover" />
                               )}
                               <CardContent className="p-4">
-                                <h3 className="font-semibold text-white mb-2">{vehicle.name}</h3>
-                                <div className="space-y-1 text-sm text-gray-400 mb-2">
+                                <h3 className="font-semibold text-void mb-2">{vehicle.name}</h3>
+                                <div className="space-y-1 text-sm text-coco-mgray mb-2">
                                   <p>Tipo: {vehicle.type}</p>
                                   <p>Capacidad: {vehicle.capacity} pasajeros</p>
                                   <p>Equipaje: {vehicle.luggageCapacity} maletas</p>
@@ -1800,7 +1815,7 @@ export default function AdminDashboard() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => setEditingVehicle(vehicle)}
-                                      className="text-white hover:bg-white/10"
+                                      className="text-void hover:bg-black/[0.06]"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>
@@ -1831,12 +1846,12 @@ export default function AdminDashboard() {
 
             {/* Testimonials Tab */}
             <TabsContent value="testimonials" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white">Gestión de Testimonios</CardTitle>
-                      <CardDescription className="text-gray-400">Agrega, edita o elimina testimonios de clientes</CardDescription>
+                      <CardTitle className="font-display text-xl text-void">Gestión de Testimonios</CardTitle>
+                      <CardDescription className="text-coco-mgray">Agrega, edita o elimina testimonios de clientes</CardDescription>
                     </div>
                     <Button onClick={() => setEditingTestimonial(undefined)} className="bg-coco-gold text-black hover:bg-coco-gold/90">
                       <Plus className="h-4 w-4 mr-2" />
@@ -1860,32 +1875,32 @@ export default function AdminDashboard() {
                           <Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" />
                         </div>
                       ) : testimonials.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-coco-mgray">
                           <p>No hay testimonios aún. Crea tu primer testimonio.</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
                           {testimonials.map((testimonial) => (
-                            <Card key={testimonial.id} className="border-white/10 bg-glass-dark">
+                            <Card key={testimonial.id} className="border border-black/[0.06] bg-white shadow-sm">
                               <CardContent className="p-4">
                                 <div className="flex justify-between items-start mb-2">
                                   <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                      <h3 className="font-semibold text-white">{testimonial.customerName}</h3>
+                                      <h3 className="font-semibold text-void">{testimonial.customerName}</h3>
                                       <div className="flex text-coco-gold">
                                         {[...Array(testimonial.rating)].map((_, i) => (
                                           <Star key={i} className="h-4 w-4 fill-current" />
                                         ))}
                                       </div>
                                     </div>
-                                    <p className="text-sm text-gray-400">{testimonial.date}</p>
+                                    <p className="text-sm text-coco-mgray">{testimonial.date}</p>
                                   </div>
                                   <div className="flex gap-2">
                                     <Button
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => setEditingTestimonial(testimonial)}
-                                      className="text-white hover:bg-white/10"
+                                      className="text-void hover:bg-black/[0.06]"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>
@@ -1903,7 +1918,7 @@ export default function AdminDashboard() {
                                     </Button>
               </div>
             </div>
-                                <p className="text-gray-300 italic">"{testimonial.review}"</p>
+                                <p className="text-coco-mgray italic">"{testimonial.review}"</p>
                               </CardContent>
                             </Card>
                           ))}
@@ -1917,57 +1932,57 @@ export default function AdminDashboard() {
 
             {/* Contact Info Tab */}
             <TabsContent value="contact" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                   <CardHeader>
-                  <CardTitle className="text-white">Información de Contacto</CardTitle>
-                  <CardDescription className="text-gray-400">Actualiza la información de contacto de la empresa</CardDescription>
+                  <CardTitle className="font-display text-xl text-void">Información de Contacto</CardTitle>
+                  <CardDescription className="text-coco-mgray">Actualiza la información de contacto de la empresa</CardDescription>
                   </CardHeader>
                   <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-gray-300">Nombre de la Empresa</Label>
+                      <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Nombre de la Empresa</Label>
                       <Input
                         value={contactInfo.name}
                         onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
-                        className="bg-void/50 border-white/10 text-white"
+                        className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-gray-300">Teléfono</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Teléfono</Label>
                         <Input
                           value={contactInfo.phone}
                           onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-                          className="bg-void/50 border-white/10 text-white"
+                          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-300">WhatsApp</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">WhatsApp</Label>
                         <Input
                           value={contactInfo.whatsapp}
                           onChange={(e) => setContactInfo({ ...contactInfo, whatsapp: e.target.value })}
-                          className="bg-void/50 border-white/10 text-white"
+                          className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                         />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-gray-300">Email</Label>
+                      <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Email</Label>
                       <Input
                         type="email"
                         value={contactInfo.email}
                         onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-                        className="bg-void/50 border-white/10 text-white"
+                        className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                       />
                     </div>
                     <div>
-                      <Label className="text-gray-300">Zonas de Cobertura (separado por comas)</Label>
+                      <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Zonas de Cobertura (separado por comas)</Label>
                       <Input
                         value={contactInfo.coverage.join(', ')}
                         onChange={(e) => setContactInfo({ 
                           ...contactInfo, 
                           coverage: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
                         })}
-                        className="bg-void/50 border-white/10 text-white"
+                        className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"
                       />
                     </div>
                     <Button 
@@ -1991,18 +2006,18 @@ export default function AdminDashboard() {
 
             {/* TripAdvisor Tab */}
             <TabsContent value="tripadvisor" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-white">Integración con TripAdvisor</CardTitle>
-                  <CardDescription className="text-gray-400">Conecta con TripAdvisor para sincronizar reseñas</CardDescription>
+                  <CardTitle className="font-display text-xl text-void">Integración con TripAdvisor</CardTitle>
+                  <CardDescription className="text-coco-mgray">Conecta con TripAdvisor para sincronizar reseñas</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Alert className="bg-void/50 border-white/10">
+                  <Alert className="border border-coco-gold/25 bg-coco-gold/5 text-void">
                     <ExternalLink className="h-4 w-4 text-coco-gold" />
-                    <AlertDescription className="text-gray-300">
-                      <strong className="text-white">Próximamente:</strong> La integración con TripAdvisor permitirá sincronizar reseñas automáticamente.
+                    <AlertDescription className="text-sm text-void/80">
+                      <strong className="font-semibold text-void">Próximamente:</strong> La integración con TripAdvisor permitirá sincronizar reseñas automáticamente.
                       Para configurar, necesitarás:
-                      <ul className="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                      <ul className="list-disc list-inside mt-2 space-y-1 text-coco-mgray">
                         <li>API Key de TripAdvisor</li>
                         <li>ID de tu negocio en TripAdvisor</li>
                         <li>Configuración de webhook para actualizaciones en tiempo real</li>
@@ -2018,12 +2033,12 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="blog" className="space-y-6">
-              <Card className="glass-panel border-white/10">
+              <Card className="rounded-xl border border-black/[0.06] bg-white shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white">Gestión del Blog</CardTitle>
-                      <CardDescription className="text-gray-400">Crea y publica posts manualmente desde el dashboard</CardDescription>
+                      <CardTitle className="font-display text-xl text-void">Gestión del Blog</CardTitle>
+                      <CardDescription className="text-coco-mgray">Crea y publica posts manualmente desde el dashboard</CardDescription>
                     </div>
                     <Button onClick={() => setEditingBlogPost(undefined)} className="bg-coco-gold text-black hover:bg-coco-gold/90">
                       <Plus className="h-4 w-4 mr-2" />
@@ -2036,50 +2051,50 @@ export default function AdminDashboard() {
                     <form onSubmit={handleBlogSubmit} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label className="text-gray-300">Título</Label>
-                          <Input value={blogForm.title} onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })} className="bg-void/50 border-white/10 text-white" required />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Título</Label>
+                          <Input value={blogForm.title} onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" required />
                         </div>
                         <div>
-                          <Label className="text-gray-300">Slug (opcional)</Label>
-                          <Input value={blogForm.slug} onChange={(e) => setBlogForm({ ...blogForm, slug: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Slug (opcional)</Label>
+                          <Input value={blogForm.slug} onChange={(e) => setBlogForm({ ...blogForm, slug: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                         </div>
                       </div>
                       <div>
-                        <Label className="text-gray-300">Extracto</Label>
-                        <Textarea value={blogForm.excerpt} onChange={(e) => setBlogForm({ ...blogForm, excerpt: e.target.value })} rows={3} className="bg-void/50 border-white/10 text-white" />
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Extracto</Label>
+                        <Textarea value={blogForm.excerpt} onChange={(e) => setBlogForm({ ...blogForm, excerpt: e.target.value })} rows={3} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                       </div>
                       <div>
-                        <Label className="text-gray-300">Contenido HTML</Label>
-                        <Textarea value={blogForm.contentHtml} onChange={(e) => setBlogForm({ ...blogForm, contentHtml: e.target.value })} rows={14} className="bg-void/50 border-white/10 text-white font-mono text-xs" required />
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Contenido HTML</Label>
+                        <Textarea value={blogForm.contentHtml} onChange={(e) => setBlogForm({ ...blogForm, contentHtml: e.target.value })} rows={14} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD] font-mono text-xs" required />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label className="text-gray-300">Meta title</Label>
-                          <Input value={blogForm.metaTitle} onChange={(e) => setBlogForm({ ...blogForm, metaTitle: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Meta title</Label>
+                          <Input value={blogForm.metaTitle} onChange={(e) => setBlogForm({ ...blogForm, metaTitle: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                         </div>
                         <div>
-                          <Label className="text-gray-300">Meta description</Label>
-                          <Input value={blogForm.metaDescription} onChange={(e) => setBlogForm({ ...blogForm, metaDescription: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Meta description</Label>
+                          <Input value={blogForm.metaDescription} onChange={(e) => setBlogForm({ ...blogForm, metaDescription: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <Label className="text-gray-300">Palabra clave</Label>
-                          <Input value={blogForm.focusKeyword} onChange={(e) => setBlogForm({ ...blogForm, focusKeyword: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Palabra clave</Label>
+                          <Input value={blogForm.focusKeyword} onChange={(e) => setBlogForm({ ...blogForm, focusKeyword: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                         </div>
                         <div>
-                          <Label className="text-gray-300">Imagen portada URL</Label>
-                          <Input value={blogForm.coverImageUrl} onChange={(e) => setBlogForm({ ...blogForm, coverImageUrl: e.target.value })} className="bg-void/50 border-white/10 text-white" />
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Imagen portada URL</Label>
+                          <Input value={blogForm.coverImageUrl} onChange={(e) => setBlogForm({ ...blogForm, coverImageUrl: e.target.value })} className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]" />
                         </div>
                         <div>
-                          <Label className="text-gray-300">Estado</Label>
+                          <Label className="text-[11px] font-bold uppercase tracking-wide text-coco-mgray">Estado</Label>
                           <Select value={blogForm.status} onValueChange={(value: any) => setBlogForm({ ...blogForm, status: value })}>
-                            <SelectTrigger className="bg-void/50 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-void border-white/10">
-                              <SelectItem value="draft" className="text-white">Borrador</SelectItem>
-                              <SelectItem value="published" className="text-white">Publicado</SelectItem>
-                              <SelectItem value="scheduled" className="text-white">Programado</SelectItem>
-                              <SelectItem value="failed" className="text-white">Fallido</SelectItem>
+                            <SelectTrigger className="border border-[#E0E0E0] bg-white text-void placeholder:text-[#BDBDBD]"><SelectValue /></SelectTrigger>
+                            <SelectContent className="border border-black/10 bg-white text-void">
+                              <SelectItem value="draft" className="text-void focus:bg-coco-gold/10">Borrador</SelectItem>
+                              <SelectItem value="published" className="text-void focus:bg-coco-gold/10">Publicado</SelectItem>
+                              <SelectItem value="scheduled" className="text-void focus:bg-coco-gold/10">Programado</SelectItem>
+                              <SelectItem value="failed" className="text-void focus:bg-coco-gold/10">Fallido</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2089,7 +2104,7 @@ export default function AdminDashboard() {
                           {(createBlogPost.isPending || updateBlogPost.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                           {editingBlogPost ? 'Actualizar' : 'Crear'} Post
                         </Button>
-                        <Button type="button" variant="outline" onClick={() => setEditingBlogPost(null)} className="border-white/30 text-white hover:bg-white/20 hover:text-white">
+                        <Button type="button" variant="outline" onClick={() => setEditingBlogPost(null)} className="border-[#D0D0D0] text-void hover:bg-coco-gold/10 hover:text-void">
                           Cancelar
                         </Button>
                       </div>
@@ -2099,22 +2114,22 @@ export default function AdminDashboard() {
                       {blogPostsLoading ? (
                         <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-coco-gold" /></div>
                       ) : blogPosts.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400"><p>No hay posts todavía.</p></div>
+                        <div className="text-center py-8 text-coco-mgray"><p>No hay posts todavía.</p></div>
                       ) : (
                         <div className="space-y-3">
                           {(blogPosts as BlogPost[]).map((post) => (
-                            <Card key={post.id} className="border-white/10 bg-glass-dark">
+                            <Card key={post.id} className="border border-black/[0.06] bg-white shadow-sm">
                               <CardContent className="p-4 flex items-start justify-between gap-4">
                                 <div>
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-semibold text-white">{post.title}</h3>
+                                    <h3 className="font-semibold text-void">{post.title}</h3>
                                     <Badge className="bg-coco-gold/20 text-coco-gold border-coco-gold/40">{post.status}</Badge>
                                   </div>
-                                  <p className="text-xs text-gray-400 mb-1">/{post.slug}</p>
-                                  <p className="text-sm text-gray-300">{post.excerpt || 'Sin extracto'}</p>
+                                  <p className="text-xs text-coco-mgray mb-1">/{post.slug}</p>
+                                  <p className="text-sm text-coco-mgray">{post.excerpt || 'Sin extracto'}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                  <Button size="sm" variant="ghost" onClick={() => setEditingBlogPost(post)} className="text-white hover:bg-white/10">
+                                  <Button size="sm" variant="ghost" onClick={() => setEditingBlogPost(post)} className="text-void hover:bg-black/[0.06]">
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                   <Button size="sm" variant="ghost" onClick={() => { if (confirm('¿Eliminar este post?')) deleteBlogPost.mutate(post.id); }} className="text-red-500 hover:text-red-700 hover:bg-red-500/10">
@@ -2131,6 +2146,7 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </TabsContent>
+            </main>
           </Tabs>
         </div>
       </div>

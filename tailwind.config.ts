@@ -76,11 +76,15 @@ export default {
         // Colores de lujo del código de referencia
         void: "#0A0A0A",
         "coco-gold": "#C9A84C",
+        "coco-navy": "#0D1B2A",
+        "coco-panel": "#F0F2F5",
+        "coco-mgray": "#888888",
         "glass-dark": "rgba(13, 27, 42, 0.95)",
       },
       fontFamily: {
-        sans: ["Montserrat", "Inter", "system-ui", "sans-serif"],
-        serif: ["Cinzel", "var(--font-serif)"],
+        sans: ["DM Sans", "Montserrat", "Inter", "system-ui", "sans-serif"],
+        display: ["Cormorant Garamond", "Georgia", "serif"],
+        serif: ["Cormorant Garamond", "Cinzel", "var(--font-serif)", "Georgia", "serif"],
         mono: ["var(--font-mono)"],
       },
       backgroundImage: {
