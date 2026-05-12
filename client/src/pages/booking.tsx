@@ -25,6 +25,11 @@ import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import { PhoneInput } from "@/components/phone-input";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  firstValidDate,
+  flightVerifyCacheKey,
+  pickupBufferMinutesBeforeDeparture,
+} from "@/lib/flight-helpers";
 
 // Placeholder SVG como data URI (evita ERR_NAME_NOT_RESOLVED de servicios externos)
 function getVehiclePlaceholder(_text?: string) {
@@ -44,15 +49,29 @@ export default function Booking() {
   const [flightDate, setFlightDate] = useState("");
   const [flightDatePopoverOpen, setFlightDatePopoverOpen] = useState(false);
   const [flightVerification, setFlightVerification] = useState<any | null>(null);
+  const [outboundFlightNumber, setOutboundFlightNumber] = useState("");
+  const [outboundFlightDate, setOutboundFlightDate] = useState("");
+  const [outboundFlightDatePopoverOpen, setOutboundFlightDatePopoverOpen] = useState(false);
+  const [outboundFlightVerification, setOutboundFlightVerification] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const normalizedFlightNumber = flightNumber.replace(/\s+/g, "").toUpperCase();
   const isFlightNumberValidClient = /^[A-Z0-9]{2,3}\d{1,4}$/.test(normalizedFlightNumber);
+  const normalizedOutboundFlightNumber = outboundFlightNumber.replace(/\s+/g, "").toUpperCase();
+  const isOutboundFlightValidClient = /^[A-Z0-9]{2,3}\d{1,4}$/.test(normalizedOutboundFlightNumber);
   const latestFlightInputRef = useRef<{ flightNumber: string; flightDate: string }>({
     flightNumber: "",
     flightDate: "",
   });
+  const latestOutboundFlightInputRef = useRef<{ flightNumber: string; flightDate: string }>({
+    flightNumber: "",
+    flightDate: "",
+  });
+  const pickupTimeTouchedRef = useRef(false);
+  const returnPickupTimeTouchedRef = useRef(false);
+  const lastInboundToastKeyRef = useRef<string>("");
+  const lastOutboundToastKeyRef = useRef<string>("");
 
   const form = useForm<InsertBooking>({
     resolver: zodResolver(insertBookingSchema),
@@ -102,7 +121,25 @@ export default function Booking() {
           setEstimatedPrice(data.estimatedPrice);
           form.setValue("estimatedPrice", String(data.estimatedPrice));
         }
-        if (data.pickupDate) form.setValue("pickupDate", data.pickupDate);
+        if (data.pickupDate) {
+          const ymd = String(data.pickupDate).slice(0, 10);
+          const pt = data.pickupTime && String(data.pickupTime).includes(":") ? String(data.pickupTime) : "";
+          if (pt) {
+            const [hhRaw, mmRaw] = pt.split(":");
+            const hh = parseInt(hhRaw, 10);
+            const mm = parseInt(mmRaw, 10) || 0;
+            const [y, mo, da] = ymd.split("-").map((x: string) => parseInt(x, 10));
+            if (!Number.isNaN(y) && !Number.isNaN(hh)) {
+              const combined = new Date(y, (mo || 1) - 1, da || 1, hh, mm, 0, 0);
+              form.setValue("pickupDate", combined);
+              pickupTimeTouchedRef.current = true;
+            } else {
+              form.setValue("pickupDate", new Date(data.pickupDate));
+            }
+          } else {
+            form.setValue("pickupDate", new Date(data.pickupDate));
+          }
+        }
         if (data.flightNumber) setFlightNumber(String(data.flightNumber));
         if (data.flightDate) setFlightDate(String(data.flightDate));
         if (data.flightVerification) setFlightVerification(data.flightVerification);
@@ -126,6 +163,13 @@ export default function Booking() {
       flightDate: flightDate || "",
     };
   }, [normalizedFlightNumber, flightDate]);
+
+  useEffect(() => {
+    latestOutboundFlightInputRef.current = {
+      flightNumber: normalizedOutboundFlightNumber,
+      flightDate: outboundFlightDate || "",
+    };
+  }, [normalizedOutboundFlightNumber, outboundFlightDate]);
 
   // Preselección desde /fleet?vehicleId=...
   useEffect(() => {
@@ -178,10 +222,10 @@ export default function Booking() {
     },
   });
 
-  type FlightVerifyVars = { flightNumber: string; flightDate?: string };
+  type FlightVerifyVars = { leg: "inbound" | "outbound"; flightNumber: string; flightDate?: string };
   const verifyFlightMutation = useMutation({
-    mutationFn: async ({ flightNumber: fn, flightDate: fd }: FlightVerifyVars) => {
-      const flightCacheKey = `flightVerify:${fn}|${fd || ""}`;
+    mutationFn: async ({ leg, flightNumber: fn, flightDate: fd }: FlightVerifyVars) => {
+      const flightCacheKey = flightVerifyCacheKey(leg, fn, fd);
 
       try {
         const cached = sessionStorage.getItem(flightCacheKey);
@@ -220,47 +264,88 @@ export default function Booking() {
       return result;
     },
     onSuccess: (result, vars) => {
-      const latest = latestFlightInputRef.current;
-      if (vars.flightNumber !== latest.flightNumber) return;
-      if ((vars.flightDate || "") !== latest.flightDate) return;
+      if (vars.leg === "inbound") {
+        const latest = latestFlightInputRef.current;
+        if (vars.flightNumber !== latest.flightNumber) return;
+        if ((vars.flightDate || "") !== latest.flightDate) return;
 
-      setFlightVerification(result);
+        setFlightVerification(result);
+        if (!result?.verified) {
+          toast({
+            variant: "destructive",
+            title: "Vuelo no verificado",
+            description: result?.reason || "No se encontró información para ese vuelo.",
+          });
+          return;
+        }
+
+        if (result?.arrival?.iata === "PUJ") {
+          form.setValue("origin", "Punta Cana International Airport (PUJ)");
+        }
+        if (result?.departure?.iata === "PUJ") {
+          form.setValue("destination", "Punta Cana International Airport (PUJ)");
+        }
+
+        if (!pickupTimeTouchedRef.current) {
+          const arrival = firstValidDate(
+            result?.arrival?.actual,
+            result?.arrival?.estimated,
+            result?.arrival?.scheduled,
+          );
+          if (arrival) {
+            form.setValue("pickupDate", arrival as any);
+          }
+        }
+
+        const toastKey = `${vars.flightNumber}|${vars.flightDate || ""}`;
+        if (lastInboundToastKeyRef.current !== toastKey) {
+          lastInboundToastKeyRef.current = toastKey;
+          toast({
+            title: "Vuelo verificado",
+            description: `${result?.airline?.name || "Aerolínea"} • Estado: ${result?.status || "N/A"}`,
+          });
+        }
+        return;
+      }
+
+      const latestO = latestOutboundFlightInputRef.current;
+      if (vars.flightNumber !== latestO.flightNumber) return;
+      if ((vars.flightDate || "") !== latestO.flightDate) return;
+
+      setOutboundFlightVerification(result);
       if (!result?.verified) {
         toast({
           variant: "destructive",
-          title: "Vuelo no verificado",
+          title: "Vuelo de salida no verificado",
           description: result?.reason || "No se encontró información para ese vuelo.",
         });
         return;
       }
 
-      // Si llega a PUJ, sugerimos aeropuerto como origen.
-      if (result?.arrival?.iata === "PUJ") {
-        form.setValue("origin", "Punta Cana International Airport (PUJ)");
-      }
-      // Si sale de PUJ, sugerimos aeropuerto como destino.
-      if (result?.departure?.iata === "PUJ") {
-        form.setValue("destination", "Punta Cana International Airport (PUJ)");
-      }
-
-      // Si hay hora estimada/real de llegada, sugerimos pickupDate.
-      const suggestedIso =
-        result?.arrival?.estimated ||
-        result?.arrival?.actual ||
-        result?.departure?.estimated ||
-        result?.departure?.actual ||
-        null;
-      if (suggestedIso) {
-        const d = new Date(suggestedIso);
-        if (!isNaN(d.getTime())) {
-          form.setValue("pickupDate", d as any);
+      if (!returnPickupTimeTouchedRef.current) {
+        const dep = firstValidDate(
+          result?.departure?.actual,
+          result?.departure?.estimated,
+          result?.departure?.scheduled,
+        );
+        if (dep) {
+          const bufferMin = pickupBufferMinutesBeforeDeparture(
+            form.getValues("origin") || "",
+            form.getValues("destination") || "",
+          );
+          const pickupAt = new Date(dep.getTime() - bufferMin * 60 * 1000);
+          form.setValue("returnDate", pickupAt as any);
         }
       }
 
-      toast({
-        title: "Vuelo verificado",
-        description: `${result?.airline?.name || "Aerolínea"} • Estado: ${result?.status || "N/A"}`,
-      });
+      const toastKeyO = `${vars.flightNumber}|${vars.flightDate || ""}`;
+      if (lastOutboundToastKeyRef.current !== toastKeyO) {
+        lastOutboundToastKeyRef.current = toastKeyO;
+        toast({
+          title: "Vuelo de salida verificado",
+          description: `${result?.airline?.name || "Aerolínea"} • Salida: ${result?.departure?.iata || "-"} • Buffer sugerido ${pickupBufferMinutesBeforeDeparture(form.getValues("origin") || "", form.getValues("destination") || "")} min antes del despegue (ajustable abajo).`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -270,6 +355,32 @@ export default function Booking() {
       });
     },
   });
+
+  useEffect(() => {
+    if (!isFlightNumberValidClient) return;
+    const t = window.setTimeout(() => {
+      verifyFlightMutation.mutate({
+        leg: "inbound",
+        flightNumber: normalizedFlightNumber,
+        flightDate: flightDate || undefined,
+      });
+    }, 650);
+    return () => window.clearTimeout(t);
+  }, [normalizedFlightNumber, flightDate, isFlightNumberValidClient]);
+
+  const serviceTypeWatch = form.watch("serviceType");
+  useEffect(() => {
+    if (serviceTypeWatch !== "round_trip") return;
+    if (!isOutboundFlightValidClient) return;
+    const t = window.setTimeout(() => {
+      verifyFlightMutation.mutate({
+        leg: "outbound",
+        flightNumber: normalizedOutboundFlightNumber,
+        flightDate: outboundFlightDate || undefined,
+      });
+    }, 650);
+    return () => window.clearTimeout(t);
+  }, [serviceTypeWatch, normalizedOutboundFlightNumber, outboundFlightDate, isOutboundFlightValidClient]);
 
   // Si el usuario cambia el vuelo (y ya había un resultado), limpiamos para evitar confusión.
   // No limpiamos ciegamente porque también restauramos valores desde sessionStorage.
@@ -287,6 +398,37 @@ export default function Booking() {
       if (rawDateOnly !== desiredDateOnly) setFlightVerification(null);
     }
   }, [flightNumber, flightDate, flightVerification, normalizedFlightNumber]);
+
+  useEffect(() => {
+    if (!outboundFlightVerification) return;
+    if (
+      outboundFlightVerification.flightNumber &&
+      outboundFlightVerification.flightNumber !== normalizedOutboundFlightNumber
+    ) {
+      setOutboundFlightVerification(null);
+      return;
+    }
+    const rawFlightDate = outboundFlightVerification?.raw?.flightDate;
+    if (rawFlightDate) {
+      const rawDateOnly = String(rawFlightDate).slice(0, 10);
+      const desiredDateOnly = outboundFlightDate ? String(outboundFlightDate).slice(0, 10) : "";
+      if (rawDateOnly !== desiredDateOnly) setOutboundFlightVerification(null);
+    }
+  }, [
+    outboundFlightNumber,
+    outboundFlightDate,
+    outboundFlightVerification,
+    normalizedOutboundFlightNumber,
+  ]);
+
+  useEffect(() => {
+    if (serviceTypeWatch !== "round_trip") {
+      setOutboundFlightNumber("");
+      setOutboundFlightDate("");
+      setOutboundFlightVerification(null);
+      lastOutboundToastKeyRef.current = "";
+    }
+  }, [serviceTypeWatch]);
 
   const onInvalid = () => {
     toast({
@@ -321,6 +463,13 @@ export default function Booking() {
           ? `\n[Flight Provided] ${flightNumber.replace(/\s+/g, "").toUpperCase()}`
           : "";
 
+    const outboundSummary =
+      data.serviceType === "round_trip" && outboundFlightVerification?.verified
+        ? `\n[Outbound Flight Verified] ${outboundFlightVerification.flightNumber} | Status: ${outboundFlightVerification.status || "N/A"} | Dep: ${outboundFlightVerification.departure?.iata || "-"} ${outboundFlightVerification.departure?.scheduled || ""} | Pickup buffer min: ${pickupBufferMinutesBeforeDeparture(data.origin || "", data.destination || "")}`
+        : data.serviceType === "round_trip" && outboundFlightNumber
+          ? `\n[Outbound Flight Provided] ${outboundFlightNumber.replace(/\s+/g, "").toUpperCase()}`
+          : "";
+
     const bookingData = {
       ...data,
       estimatedPrice: price.toString(),
@@ -334,7 +483,7 @@ export default function Booking() {
       flightAirline: flightVerification?.airline?.name || undefined,
       flightDepartureIata: flightVerification?.departure?.iata || undefined,
       flightArrivalIata: flightVerification?.arrival?.iata || undefined,
-      specialRequests: `${data.specialRequests || ""}${flightSummary}`.trim(),
+      specialRequests: `${data.specialRequests || ""}${flightSummary}${outboundSummary}`.trim(),
     };
     
     bookingMutation.mutate(bookingData);
@@ -495,13 +644,16 @@ export default function Booking() {
                       <div className="border border-white/10 rounded-lg p-4 bg-void/40">
                         <div className="flex items-center gap-2 mb-3">
                           <Plane className="h-4 w-4 text-coco-gold" />
-                          <h4 className="text-white text-sm font-semibold uppercase tracking-wider">Flight Verification (Optional)</h4>
+                          <h4 className="text-white text-sm font-semibold uppercase tracking-wider">Vuelo (opcional)</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <p className="text-xs text-gray-400 mb-3">
+                          La verificación es automática al completar un código válido (IATA p. ej. WN2496 o ICAO p. ej. SWA2496). La hora de recogida se sugiere según la llegada del vuelo; puedes cambiarla abajo.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <Input
                             value={flightNumber}
                             onChange={(e) => setFlightNumber(e.target.value)}
-                            placeholder="Ej: AA1234"
+                            placeholder="Ej: WN2496 o SWA2496"
                             className="bg-void/50 border-white/10 text-white placeholder:text-gray-500"
                           />
                           <Popover open={flightDatePopoverOpen} onOpenChange={setFlightDatePopoverOpen}>
@@ -558,25 +710,13 @@ export default function Booking() {
                               />
                             </PopoverContent>
                           </Popover>
-                          <Button
-                            type="button"
-                            disabled={!flightNumber || !isFlightNumberValidClient || verifyFlightMutation.isPending}
-                            onClick={() =>
-                              verifyFlightMutation.mutate({
-                                flightNumber: normalizedFlightNumber,
-                                flightDate: flightDate || undefined,
-                              })
-                            }
-                            className="bg-coco-gold text-black hover:bg-coco-gold/90"
-                          >
-                            {verifyFlightMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                              <Plane className="h-4 w-4 mr-2" />
-                            )}
-                            {verifyFlightMutation.isPending ? "Verificando…" : "Verificar vuelo"}
-                          </Button>
                         </div>
+                        {verifyFlightMutation.isPending && isFlightNumberValidClient ? (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-coco-gold">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Verificando vuelo…
+                          </div>
+                        ) : null}
                         {flightVerification ? (
                           <div
                             className={`mt-3 text-xs text-gray-300 rounded p-3 bg-void/40 border ${
@@ -594,6 +734,126 @@ export default function Booking() {
                             ) : (
                               <p><strong className="text-white">Resultado:</strong> No verificado ({flightVerification.reason || "sin detalles"})</p>
                             )}
+                          </div>
+                        ) : null}
+
+                        {form.watch("serviceType") === "round_trip" ? (
+                          <div className="mt-6 pt-4 border-t border-white/10 space-y-3">
+                            <h4 className="text-white text-sm font-semibold uppercase tracking-wider">
+                              Vuelo de salida (regreso al aeropuerto)
+                            </h4>
+                            <p className="text-xs text-gray-400">
+                              Verificación automática. Sugerimos la hora de recogida en hotel{" "}
+                              <strong className="text-gray-300">
+                                {pickupBufferMinutesBeforeDeparture(
+                                  form.watch("origin") || "",
+                                  form.watch("destination") || "",
+                                )}{" "}
+                                minutos
+                              </strong>{" "}
+                              antes del despegue (2h 30m base + margen según zona de tu ruta). Puedes ajustar la hora
+                              manualmente en “Return date” más abajo.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <Input
+                                value={outboundFlightNumber}
+                                onChange={(e) => setOutboundFlightNumber(e.target.value)}
+                                placeholder="Ej: WN2496 (vuelo que sale de RD)"
+                                className="bg-void/50 border-white/10 text-white placeholder:text-gray-500"
+                              />
+                              <Popover
+                                open={outboundFlightDatePopoverOpen}
+                                onOpenChange={setOutboundFlightDatePopoverOpen}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className={`h-12 w-full justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                      !outboundFlightDate && "text-gray-500"
+                                    }`}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-coco-gold" />
+                                    {outboundFlightDate ? (
+                                      format(parseISO(outboundFlightDate), "EEEE d MMMM yyyy", { locale: es })
+                                    ) : (
+                                      <span>Fecha del vuelo de salida</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={outboundFlightDate ? parseISO(outboundFlightDate) : undefined}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        setOutboundFlightDate(format(date, "yyyy-MM-dd"));
+                                        setOutboundFlightDatePopoverOpen(false);
+                                      }
+                                    }}
+                                    initialFocus
+                                    className="bg-void text-white"
+                                    classNames={{
+                                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                      month: "space-y-4",
+                                      caption: "flex justify-center pt-1 relative items-center",
+                                      caption_label: "text-sm font-medium text-white",
+                                      nav: "space-x-1 flex items-center",
+                                      nav_button:
+                                        "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                      nav_button_previous: "absolute left-1",
+                                      nav_button_next: "absolute right-1",
+                                      table: "w-full border-collapse space-y-1",
+                                      head_row: "flex",
+                                      head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                      row: "flex w-full mt-2",
+                                      cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                      day_selected:
+                                        "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                      day_today: "bg-coco-gold/30 text-white",
+                                      day_outside: "text-gray-500 opacity-50",
+                                      day_disabled: "text-gray-500 opacity-50",
+                                    }}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            {verifyFlightMutation.isPending && isOutboundFlightValidClient ? (
+                              <div className="flex items-center gap-2 text-xs text-coco-gold">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Verificando vuelo de salida…
+                              </div>
+                            ) : null}
+                            {outboundFlightVerification ? (
+                              <div
+                                className={`text-xs text-gray-300 rounded p-3 bg-void/40 border ${
+                                  outboundFlightVerification.verified
+                                    ? "border-coco-gold/30"
+                                    : "border-white/10"
+                                }`}
+                              >
+                                {outboundFlightVerification.verified ? (
+                                  <>
+                                    <p>
+                                      <strong className="text-white">Salida verificada:</strong>{" "}
+                                      {outboundFlightVerification.flightNumber} (
+                                      {outboundFlightVerification.airline?.name || "N/A"})
+                                    </p>
+                                    <p>
+                                      <strong className="text-white">Despegue:</strong>{" "}
+                                      {outboundFlightVerification.departure?.iata || "-"} ·{" "}
+                                      {outboundFlightVerification.departure?.scheduled || "N/A"}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p>
+                                    <strong className="text-white">Resultado:</strong> No verificado (
+                                    {outboundFlightVerification.reason || "sin detalles"})
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -715,6 +975,7 @@ export default function Booking() {
                             const quickTimes = ["08:00", "09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
 
                             const handleTimeChange = (newHours: string, newMinutes: string) => {
+                              pickupTimeTouchedRef.current = true;
                               const hoursNum = parseInt(newHours) || 0;
                               const minutesNum = parseInt(newMinutes) || 0;
                               
@@ -906,80 +1167,177 @@ export default function Booking() {
                         <FormField
                           control={form.control}
                           name="returnDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">Return Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={`w-full h-12 justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
-                                        !field.value && "text-gray-500"
-                                      }`}
-                                    >
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {field.value ? (
-                                        format(new Date(field.value), "PPP")
-                                      ) : (
-                                        <span>Pick a date</span>
-                                      )}
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value ? new Date(field.value) : undefined}
-                                    onSelect={(date) => {
-                                      if (date) {
-                                        // Mantener la hora existente si hay
-                                        if (field.value) {
-                                          const existingDate = new Date(field.value);
-                                          date.setHours(existingDate.getHours());
-                                          date.setMinutes(existingDate.getMinutes());
-                                        } else {
-                                          date.setHours(0);
-                                          date.setMinutes(0);
+                          render={({ field }) => {
+                            let dateValue: Date;
+                            if (field.value) {
+                              dateValue = new Date(field.value);
+                              if (isNaN(dateValue.getTime())) dateValue = new Date();
+                            } else {
+                              dateValue = new Date();
+                            }
+                            const hours = String(dateValue.getHours()).padStart(2, "0");
+                            const minutes = String(dateValue.getMinutes()).padStart(2, "0");
+                            const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+                            const minuteOptions = ["00", "15", "30", "45"];
+
+                            const handleReturnTimeChange = (newHours: string, newMinutes: string) => {
+                              returnPickupTimeTouchedRef.current = true;
+                              const hoursNum = parseInt(newHours) || 0;
+                              const minutesNum = parseInt(newMinutes) || 0;
+                              if (field.value) {
+                                const date = new Date(field.value);
+                                if (!isNaN(date.getTime())) {
+                                  date.setHours(hoursNum);
+                                  date.setMinutes(minutesNum);
+                                  date.setSeconds(0);
+                                  date.setMilliseconds(0);
+                                  field.onChange(date.toISOString());
+                                } else {
+                                  const today = new Date();
+                                  today.setHours(hoursNum);
+                                  today.setMinutes(minutesNum);
+                                  today.setSeconds(0);
+                                  today.setMilliseconds(0);
+                                  field.onChange(today.toISOString());
+                                }
+                              } else {
+                                const today = new Date();
+                                today.setHours(hoursNum);
+                                today.setMinutes(minutesNum);
+                                today.setSeconds(0);
+                                today.setMilliseconds(0);
+                                if (!isNaN(today.getTime())) field.onChange(today.toISOString());
+                              }
+                            };
+
+                            return (
+                              <FormItem>
+                                <FormLabel className="text-gray-300 text-xs uppercase tracking-wider">
+                                  Regreso: fecha y hora de recogida *
+                                </FormLabel>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className={`w-full h-12 justify-start text-left font-normal bg-void/50 border-white/10 text-white hover:bg-void/70 hover:text-white ${
+                                          !field.value && "text-gray-500"
+                                        }`}
+                                      >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value ? (
+                                          format(new Date(field.value), "PPP")
+                                        ) : (
+                                          <span>Elige la fecha</span>
+                                        )}
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={field.value ? new Date(field.value) : undefined}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          if (field.value) {
+                                            const existingDate = new Date(field.value);
+                                            date.setHours(existingDate.getHours());
+                                            date.setMinutes(existingDate.getMinutes());
+                                          } else {
+                                            date.setHours(0);
+                                            date.setMinutes(0);
+                                          }
+                                          field.onChange(date.toISOString());
                                         }
-                                        field.onChange(date.toISOString());
-                                      }
-                                    }}
-                                    disabled={(date) => {
-                                      const pickupDate = form.watch("pickupDate");
-                                      if (pickupDate) {
-                                        return date < new Date(pickupDate);
-                                      }
-                                      return date < new Date(new Date().setHours(0, 0, 0, 0));
-                                    }}
-                                    initialFocus
-                                    className="bg-void text-white"
-                                    classNames={{
-                                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                                      month: "space-y-4",
-                                      caption: "flex justify-center pt-1 relative items-center",
-                                      caption_label: "text-sm font-medium text-white",
-                                      nav: "space-x-1 flex items-center",
-                                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
-                                      nav_button_previous: "absolute left-1",
-                                      nav_button_next: "absolute right-1",
-                                      table: "w-full border-collapse space-y-1",
-                                      head_row: "flex",
-                                      head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-                                      row: "flex w-full mt-2",
-                                      cell: "h-9 w-9 text-center text-sm p-0 relative",
-                                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
-                                      day_selected: "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
-                                      day_today: "bg-coco-gold/30 text-white",
-                                      day_outside: "text-gray-500 opacity-50",
-                                      day_disabled: "text-gray-500 opacity-50",
-                                    }}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                                      }}
+                                      disabled={(date) => {
+                                        const pickupDate = form.watch("pickupDate");
+                                        if (pickupDate) {
+                                          return date < new Date(pickupDate);
+                                        }
+                                        return date < new Date(new Date().setHours(0, 0, 0, 0));
+                                      }}
+                                      initialFocus
+                                      className="bg-void text-white"
+                                      classNames={{
+                                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                        month: "space-y-4",
+                                        caption: "flex justify-center pt-1 relative items-center",
+                                        caption_label: "text-sm font-medium text-white",
+                                        nav: "space-x-1 flex items-center",
+                                        nav_button:
+                                          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20",
+                                        nav_button_previous: "absolute left-1",
+                                        nav_button_next: "absolute right-1",
+                                        table: "w-full border-collapse space-y-1",
+                                        head_row: "flex",
+                                        head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                                        row: "flex w-full mt-2",
+                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                        day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-coco-gold/20 hover:text-white",
+                                        day_selected:
+                                          "bg-coco-gold text-black hover:bg-coco-gold hover:text-black focus:bg-coco-gold focus:text-black",
+                                        day_today: "bg-coco-gold/30 text-white",
+                                        day_outside: "text-gray-500 opacity-50",
+                                        day_disabled: "text-gray-500 opacity-50",
+                                      }}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <FormControl>
+                                  <div className="mt-3">
+                                    <div className="flex items-center gap-2">
+                                      <Select
+                                        value={hours}
+                                        onValueChange={(value) => handleReturnTimeChange(value, minutes)}
+                                      >
+                                        <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                          <SelectValue placeholder="HH" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-void border-white/10 max-h-[200px]">
+                                          {hourOptions.map((hour) => (
+                                            <SelectItem
+                                              key={hour}
+                                              value={hour}
+                                              className="text-white hover:bg-coco-gold/20"
+                                            >
+                                              {hour}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <span className="text-white text-lg font-bold">:</span>
+                                      <Select
+                                        value={minutes}
+                                        onValueChange={(value) => handleReturnTimeChange(hours, value)}
+                                      >
+                                        <SelectTrigger className="bg-void/50 border-white/10 text-white focus:border-coco-gold h-12 flex-1">
+                                          <SelectValue placeholder="MM" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-void border-white/10">
+                                          {minuteOptions.map((minute) => (
+                                            <SelectItem
+                                              key={minute}
+                                              value={minute}
+                                              className="text-white hover:bg-coco-gold/20"
+                                            >
+                                              {minute}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      Si verificaste el vuelo de salida, prellenamos esta hora; siempre puedes
+                                      corregirla aquí.
+                                    </p>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
                         />
                       )}
 

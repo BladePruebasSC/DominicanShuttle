@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
 import { apiRequest } from "@/lib/queryClient";
+import { firstValidDate, flightVerifyCacheKey } from "@/lib/flight-helpers";
 
 const bookingFormSchema = z.object({
   origin: z.string().min(1, "Selecciona el origen"),
@@ -43,8 +44,11 @@ export default function BookingWidget() {
   const [flightNumber, setFlightNumber] = useState("");
   const [flightDate, setFlightDate] = useState("");
   const [flightDatePopoverOpen, setFlightDatePopoverOpen] = useState(false);
-  const [isVerifyingFlight, setIsVerifyingFlight] = useState(false);
+  const [flightVerifying, setFlightVerifying] = useState(false);
   const [flightVerification, setFlightVerification] = useState<any | null>(null);
+  const pickupTimeWidgetTouchedRef = useRef(false);
+  const lastFlightToastWidgetRef = useRef("");
+  const lastFlightErrorToastWidgetRef = useRef("");
   const { toast } = useToast();
 
   const normalizedFlightNumber = flightNumber.replace(/\s+/g, "").toUpperCase();
@@ -137,101 +141,99 @@ export default function BookingWidget() {
     }
   };
 
-  const verifyFlight = async () => {
-    const fn = normalizedFlightNumber;
-    const fd = flightDate || undefined;
-    if (!fn) return;
+  useEffect(() => {
+    if (!isFlightNumberValidClient) return;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const fn = normalizedFlightNumber;
+        const fd = flightDate || undefined;
+        const flightCacheKey = flightVerifyCacheKey("inbound", fn, fd);
 
-    if (!isFlightNumberValidClient) {
-      toast({
-        variant: "destructive",
-        title: "Formato de vuelo inválido",
-        description: "Usa algo como WN2496 (IATA) o SWA2496 (ICAO).",
-      });
-      return;
-    }
-
-    const flightCacheKey = `flightVerify:${fn}|${fd || ""}`;
-    try {
-      const cached = sessionStorage.getItem(flightCacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        const latest = latestFlightInputRef.current;
-        if (latest.flightNumber !== fn) return;
-        if ((latest.flightDate || "") !== (fd || "")) return;
-
-        setFlightVerification(parsed);
-        if (parsed?.verified) {
-          if (parsed?.arrival?.iata === "PUJ" && !form.getValues("origin")) {
-            form.setValue("origin", "Punta Cana International Airport (PUJ)");
+        try {
+          const cached = sessionStorage.getItem(flightCacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            const latest = latestFlightInputRef.current;
+            if (latest.flightNumber !== fn || (latest.flightDate || "") !== (fd || "")) return;
+            setFlightVerification(parsed);
+            applyWidgetFlightResult(parsed, fn, fd);
+            return;
           }
-          if (parsed?.departure?.iata === "PUJ" && !form.getValues("destination")) {
-            form.setValue("destination", "Punta Cana International Airport (PUJ)");
+        } catch {
+          // continuar con fetch
+        }
+
+        setFlightVerifying(true);
+        try {
+          const params = new URLSearchParams({ flightNumber: fn });
+          if (fd) params.set("flightDate", fd);
+          const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
+          const result = await res.json();
+          try {
+            sessionStorage.setItem(flightCacheKey, JSON.stringify(result));
+          } catch {
+            // ignore
           }
-          toast({
-            title: "Vuelo verificado",
-            description: `${parsed?.airline?.name || "Aerolínea"} • ${parsed?.status || "N/A"}`,
-          });
-        } else {
+          const latest = latestFlightInputRef.current;
+          if (latest.flightNumber !== fn || (latest.flightDate || "") !== (fd || "")) return;
+          setFlightVerification(result);
+          applyWidgetFlightResult(result, fn, fd);
+        } catch (error: any) {
           toast({
             variant: "destructive",
-            title: "No verificado",
-            description: parsed?.reason || "No se encontró el vuelo.",
+            title: "Error verificando vuelo",
+            description: error?.message || "Intenta nuevamente.",
           });
+        } finally {
+          setFlightVerifying(false);
         }
-        return;
-      }
-    } catch {
-      // Si sessionStorage falla, hacemos el fetch normal.
-    }
+      })();
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [normalizedFlightNumber, flightDate, isFlightNumberValidClient]);
 
-    setIsVerifyingFlight(true);
-    try {
-      const params = new URLSearchParams({ flightNumber: fn });
-      if (fd) params.set("flightDate", fd);
-      const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
-      const result = await res.json();
-
-      try {
-        sessionStorage.setItem(flightCacheKey, JSON.stringify(result));
-      } catch {
-        // ignore
-      }
-
-      const latest = latestFlightInputRef.current;
-      if (latest.flightNumber !== fn) return;
-      if ((latest.flightDate || "") !== (fd || "")) return;
-
-      setFlightVerification(result);
-
-      if (result?.verified) {
-        if (result?.arrival?.iata === "PUJ" && !form.getValues("origin")) {
-          form.setValue("origin", "Punta Cana International Airport (PUJ)");
-        }
-        if (result?.departure?.iata === "PUJ" && !form.getValues("destination")) {
-          form.setValue("destination", "Punta Cana International Airport (PUJ)");
-        }
-        toast({
-          title: "Vuelo verificado",
-          description: `${result?.airline?.name || "Aerolínea"} • ${result?.status || "N/A"}`,
-        });
-      } else {
+  function applyWidgetFlightResult(result: any, fn: string, fd?: string) {
+    if (!result?.verified) {
+      const errKey = `${fn}|${fd || ""}|${result?.reason || ""}`;
+      if (lastFlightErrorToastWidgetRef.current !== errKey) {
+        lastFlightErrorToastWidgetRef.current = errKey;
         toast({
           variant: "destructive",
           title: "No verificado",
           description: result?.reason || "No se encontró el vuelo.",
         });
       }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error verificando vuelo",
-        description: error?.message || "Intenta nuevamente.",
-      });
-    } finally {
-      setIsVerifyingFlight(false);
+      return;
     }
-  };
+    lastFlightErrorToastWidgetRef.current = "";
+    if (result?.arrival?.iata === "PUJ" && !form.getValues("origin")) {
+      form.setValue("origin", "Punta Cana International Airport (PUJ)");
+    }
+    if (result?.departure?.iata === "PUJ" && !form.getValues("destination")) {
+      form.setValue("destination", "Punta Cana International Airport (PUJ)");
+    }
+    const arrival = firstValidDate(
+      result?.arrival?.actual,
+      result?.arrival?.estimated,
+      result?.arrival?.scheduled,
+    );
+    if (arrival && !pickupTimeWidgetTouchedRef.current) {
+      const ymd = `${arrival.getFullYear()}-${String(arrival.getMonth() + 1).padStart(2, "0")}-${String(arrival.getDate()).padStart(2, "0")}`;
+      form.setValue("pickupDate", ymd);
+      form.setValue(
+        "pickupTime",
+        `${String(arrival.getHours()).padStart(2, "0")}:${String(arrival.getMinutes()).padStart(2, "0")}`,
+      );
+    }
+    const toastKey = `${fn}|${fd || ""}`;
+    if (lastFlightToastWidgetRef.current !== toastKey) {
+      lastFlightToastWidgetRef.current = toastKey;
+      toast({
+        title: "Vuelo verificado",
+        description: `${result?.airline?.name || "Aerolínea"} • ${result?.status || "N/A"}`,
+      });
+    }
+  }
 
 
   const getRecommendedVehicle = () => {
@@ -392,7 +394,10 @@ export default function BookingWidget() {
 
                 <div className="border border-white/10 rounded-lg p-4 bg-void/40">
                   <p className="text-gray-300 text-xs uppercase tracking-wider mb-3">Flight Verification (Optional)</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <p className="text-gray-500 text-xs mb-2">
+                    Al escribir un número de vuelo válido se verifica solo; la fecha y hora de recogida se sugieren según la llegada (puedes cambiarlas).
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Input
                       value={flightNumber}
                       onChange={(e) => setFlightNumber(e.target.value)}
@@ -453,15 +458,10 @@ export default function BookingWidget() {
                         />
                       </PopoverContent>
                     </Popover>
-                    <Button
-                      type="button"
-                      onClick={verifyFlight}
-                      disabled={!flightNumber || !isFlightNumberValidClient || isVerifyingFlight}
-                      className="bg-coco-gold text-black hover:bg-coco-gold/90"
-                    >
-                      {isVerifyingFlight ? "Verificando..." : "Verificar vuelo"}
-                    </Button>
                   </div>
+                  {flightVerifying ? (
+                    <p className="text-coco-gold text-xs mt-2">Verificando vuelo…</p>
+                  ) : null}
                   {flightVerification ? (
                     <div
                       className={`mt-3 text-xs text-gray-300 rounded p-3 bg-void/40 border ${
@@ -578,6 +578,7 @@ export default function BookingWidget() {
                       const minuteOptions = ["00", "15", "30", "45"];
 
                       const handleTimeChange = (newHours: string, newMinutes: string) => {
+                        pickupTimeWidgetTouchedRef.current = true;
                         const newTime = `${newHours}:${newMinutes}`;
                         field.onChange(newTime);
                       };

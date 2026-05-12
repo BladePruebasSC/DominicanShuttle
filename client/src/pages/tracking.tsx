@@ -281,6 +281,66 @@ export default function TrackingPage() {
     }
   };
 
+  /** Abre Google Maps con origen/destino e inicia el viaje en backend (una vez por reserva en este navegador). */
+  useEffect(() => {
+    if (!booking || !bookingHasAssignment) return;
+    if (isTripCompleted || isTrackingActive) return;
+    if (!resolvedBookingId) return;
+    const o = booking.origin?.trim();
+    const d = booking.destination?.trim();
+    if (!o || !d) return;
+
+    const mapsKey = `cocoluxe_maps_dir_${resolvedBookingId}`;
+    const startKey = `cocoluxe_trip_autostart_${resolvedBookingId}`;
+
+    try {
+      if (!sessionStorage.getItem(mapsKey)) {
+        sessionStorage.setItem(mapsKey, "1");
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=driving`;
+        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=driving`;
+      window.open(mapsUrl, "_blank", "noopener,noreferrer");
+    }
+
+    if (sessionStorage.getItem(startKey)) return;
+    sessionStorage.setItem(startKey, "1");
+
+    void (async () => {
+      try {
+        setLoading(true);
+        const res = await apiRequest("POST", "/api/trips/start", {
+          bookingId: resolvedBookingId,
+          deviceId: resolvedDeviceId || null,
+          clientShared: true,
+        });
+        const data = await safeJson(res);
+        setTrip(data);
+        if (resolvedDeviceId) saveDeviceId(resolvedDeviceId);
+        beginLocationWatch(data.id);
+        toast({
+          title: "Viaje iniciado",
+          description:
+            "Se abrió Google Maps con tu ruta. Acepta el permiso de ubicación si el navegador lo solicita para el seguimiento en vivo.",
+        });
+      } catch (err: any) {
+        try {
+          sessionStorage.removeItem(startKey);
+        } catch {
+          // ignore
+        }
+        toast({
+          title: "No se pudo iniciar automáticamente",
+          description: err?.message || "Pulsa “Iniciar mi viaje”.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [booking, bookingHasAssignment, isTripCompleted, isTrackingActive, resolvedBookingId, resolvedDeviceId]);
+
   const startLocationWatch = () => {
     if (!trip?.id) {
       toast({ title: "Primero inicia el viaje", description: "Aún no hay viaje activo." });
