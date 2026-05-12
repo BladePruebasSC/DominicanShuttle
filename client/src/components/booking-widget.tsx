@@ -18,7 +18,11 @@ import { useToast } from "@/hooks/use-toast";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
 import { apiRequest } from "@/lib/queryClient";
-import { firstValidDate, flightVerifyCacheKey } from "@/lib/flight-helpers";
+import {
+  firstValidDate,
+  flightVerifyCacheKey,
+  shouldClearFlightVerificationForDateMismatch,
+} from "@/lib/flight-helpers";
 
 const bookingFormSchema = z.object({
   origin: z.string().min(1, "Selecciona el origen"),
@@ -95,11 +99,8 @@ export default function BookingWidget() {
       setFlightVerification(null);
       return;
     }
-    const rawFlightDate = flightVerification?.raw?.flightDate;
-    if (rawFlightDate) {
-      const rawDateOnly = String(rawFlightDate).slice(0, 10);
-      const desiredDateOnly = flightDate ? String(flightDate).slice(0, 10) : "";
-      if (rawDateOnly !== desiredDateOnly) setFlightVerification(null);
+    if (shouldClearFlightVerificationForDateMismatch(flightVerification, flightDate)) {
+      setFlightVerification(null);
     }
   }, [flightNumber, flightDate, flightVerification, normalizedFlightNumber]);
 

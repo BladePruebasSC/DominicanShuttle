@@ -29,6 +29,7 @@ import {
   firstValidDate,
   flightVerifyCacheKey,
   pickupBufferMinutesBeforeDeparture,
+  shouldClearFlightVerificationForDateMismatch,
 } from "@/lib/flight-helpers";
 
 // Placeholder SVG como data URI (evita ERR_NAME_NOT_RESOLVED de servicios externos)
@@ -391,11 +392,8 @@ export default function Booking() {
       return;
     }
 
-    const rawFlightDate = flightVerification?.raw?.flightDate;
-    if (rawFlightDate) {
-      const rawDateOnly = String(rawFlightDate).slice(0, 10);
-      const desiredDateOnly = flightDate ? String(flightDate).slice(0, 10) : "";
-      if (rawDateOnly !== desiredDateOnly) setFlightVerification(null);
+    if (shouldClearFlightVerificationForDateMismatch(flightVerification, flightDate)) {
+      setFlightVerification(null);
     }
   }, [flightNumber, flightDate, flightVerification, normalizedFlightNumber]);
 
@@ -408,11 +406,8 @@ export default function Booking() {
       setOutboundFlightVerification(null);
       return;
     }
-    const rawFlightDate = outboundFlightVerification?.raw?.flightDate;
-    if (rawFlightDate) {
-      const rawDateOnly = String(rawFlightDate).slice(0, 10);
-      const desiredDateOnly = outboundFlightDate ? String(outboundFlightDate).slice(0, 10) : "";
-      if (rawDateOnly !== desiredDateOnly) setOutboundFlightVerification(null);
+    if (shouldClearFlightVerificationForDateMismatch(outboundFlightVerification, outboundFlightDate)) {
+      setOutboundFlightVerification(null);
     }
   }, [
     outboundFlightNumber,
