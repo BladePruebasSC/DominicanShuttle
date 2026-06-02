@@ -19,8 +19,7 @@ import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { dataSource } from "@/lib/data-source";
 import { PhoneInput } from "@/components/phone-input";
@@ -29,6 +28,10 @@ import {
   firstValidDate,
   flightDateYmdFromVerification,
   flightVerifyCacheKey,
+  formatPickupDisplay,
+  formatYmdLongEs,
+  parsePickupFieldDate,
+  parseYmdLocal,
   pickupBufferMinutesBeforeDeparture,
   pickupSuggestionFromFlightArrival,
   readFlightVerifyCache,
@@ -74,6 +77,7 @@ export default function Booking() {
     flightDate: "",
   });
   const pickupTimeTouchedRef = useRef(false);
+  const pickupDateTouchedRef = useRef(false);
   const returnPickupTimeTouchedRef = useRef(false);
   const lastInboundToastKeyRef = useRef<string>("");
   const lastOutboundToastKeyRef = useRef<string>("");
@@ -281,14 +285,14 @@ export default function Booking() {
         }
 
         const apiFlightDate = flightDateYmdFromVerification(result);
-        if (apiFlightDate && !vars.flightDate) {
+        if (apiFlightDate && !latestFlightInputRef.current.flightDate) {
           setFlightDate(apiFlightDate);
         }
 
-        if (!pickupTimeTouchedRef.current) {
+        if (!pickupTimeTouchedRef.current && !pickupDateTouchedRef.current) {
           const pickup = pickupSuggestionFromFlightArrival(result);
           if (pickup) {
-            form.setValue("pickupDate", pickup.pickupAt.toISOString() as any);
+            form.setValue("pickupDate", pickup.pickupAt as any);
           }
         }
 
@@ -656,7 +660,7 @@ export default function Booking() {
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-coco-gold" />
                                 {flightDate ? (
-                                  format(parseISO(flightDate), "EEEE d MMMM yyyy", { locale: es })
+                                  formatYmdLongEs(flightDate)
                                 ) : (
                                   <span>Fecha del vuelo</span>
                                 )}
@@ -665,7 +669,7 @@ export default function Booking() {
                             <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                               <Calendar
                                 mode="single"
-                                selected={flightDate ? parseISO(flightDate) : undefined}
+                                selected={parseYmdLocal(flightDate) ?? undefined}
                                 onSelect={(date) => {
                                   if (date) {
                                     setFlightDate(format(date, "yyyy-MM-dd"));
@@ -764,7 +768,7 @@ export default function Booking() {
                                   >
                                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-coco-gold" />
                                     {outboundFlightDate ? (
-                                      format(parseISO(outboundFlightDate), "EEEE d MMMM yyyy", { locale: es })
+                                      formatYmdLongEs(outboundFlightDate)
                                     ) : (
                                       <span>Fecha del vuelo de salida</span>
                                     )}
@@ -773,7 +777,7 @@ export default function Booking() {
                                 <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                                   <Calendar
                                     mode="single"
-                                    selected={outboundFlightDate ? parseISO(outboundFlightDate) : undefined}
+                                    selected={parseYmdLocal(outboundFlightDate) ?? undefined}
                                     onSelect={(date) => {
                                       if (date) {
                                         setOutboundFlightDate(format(date, "yyyy-MM-dd"));
@@ -879,7 +883,7 @@ export default function Booking() {
                                     >
                                       <CalendarIcon className="mr-2 h-4 w-4" />
                                       {field.value ? (
-                                        format(new Date(field.value), "PPP")
+                                        formatPickupDisplay(field.value)
                                       ) : (
                                         <span>Pick a date</span>
                                       )}
@@ -889,19 +893,20 @@ export default function Booking() {
                                 <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                                   <Calendar
                                     mode="single"
-                                    selected={field.value ? new Date(field.value) : undefined}
+                                    selected={parsePickupFieldDate(field.value)}
                                     onSelect={(date) => {
                                       if (date) {
-                                        // Mantener la hora existente si hay
-                                        if (field.value) {
-                                          const existingDate = new Date(field.value);
+                                        pickupDateTouchedRef.current = true;
+                                        const existingDate = parsePickupFieldDate(field.value);
+                                        if (existingDate) {
                                           date.setHours(existingDate.getHours());
                                           date.setMinutes(existingDate.getMinutes());
                                         } else {
                                           date.setHours(0);
                                           date.setMinutes(0);
                                         }
-                                        field.onChange(date.toISOString());
+                                        date.setSeconds(0, 0);
+                                        field.onChange(date);
                                       }
                                     }}
                                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}

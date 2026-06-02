@@ -1,3 +1,69 @@
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+/** Extrae YYYY-MM-DD de un valor de formulario o ISO. */
+export function normalizeYmd(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const m = String(value).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+/** Parsea YYYY-MM-DD en mediodía local (evita saltos de día por UTC). */
+export function parseYmdLocal(ymd: string | null | undefined): Date | null {
+  const n = normalizeYmd(ymd);
+  if (!n) return null;
+  const [y, mo, d] = n.split("-").map(Number);
+  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const date = new Date(y, mo - 1, d, 12, 0, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function formatYmdLongEs(ymd: string | null | undefined): string {
+  const n = normalizeYmd(ymd);
+  if (!n) return "";
+  const d = parseYmdLocal(n);
+  if (!d) return n;
+  try {
+    return format(d, "EEEE d MMMM yyyy", { locale: es });
+  } catch {
+    return n;
+  }
+}
+
+export function formatYmdShortEs(ymd: string | null | undefined): string {
+  const n = normalizeYmd(ymd);
+  if (!n) return "";
+  const d = parseYmdLocal(n);
+  if (!d) return n;
+  try {
+    return format(d, "PPP", { locale: es });
+  } catch {
+    return n;
+  }
+}
+
+/** Valor de pickupDate del formulario (Date o ISO) → Date segura para calendario. */
+export function parsePickupFieldDate(value: unknown): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value;
+  }
+  const ymd = normalizeYmd(String(value));
+  if (ymd) return parseYmdLocal(ymd) ?? undefined;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+export function formatPickupDisplay(value: unknown): string {
+  const d = parsePickupFieldDate(value);
+  if (!d) return "";
+  try {
+    return format(d, "PPP", { locale: es });
+  } catch {
+    return "";
+  }
+}
+
 /** Primer ISO válido entre candidatos (AviationStack suele mandar scheduled/estimated/actual). */
 export function firstValidDate(...candidates: Array<string | null | undefined>): Date | null {
   for (const c of candidates) {

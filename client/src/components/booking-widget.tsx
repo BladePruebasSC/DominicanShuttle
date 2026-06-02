@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, MapPin, Users, Car, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { format } from "date-fns";
 import { LOCATIONS, VEHICLE_TYPES, SERVICE_TYPES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
@@ -20,6 +19,9 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   flightDateYmdFromVerification,
   flightVerifyCacheKey,
+  formatYmdLongEs,
+  formatYmdShortEs,
+  parseYmdLocal,
   pickupSuggestionFromFlightArrival,
   readFlightVerifyCache,
   roundTimeUpToQuarterHour,
@@ -54,6 +56,7 @@ export default function BookingWidget() {
   const [flightVerifying, setFlightVerifying] = useState(false);
   const [flightVerification, setFlightVerification] = useState<any | null>(null);
   const pickupTimeWidgetTouchedRef = useRef(false);
+  const pickupDateWidgetTouchedRef = useRef(false);
   const lastFlightToastWidgetRef = useRef("");
   const lastFlightErrorToastWidgetRef = useRef("");
   const { toast } = useToast();
@@ -208,12 +211,12 @@ export default function BookingWidget() {
       form.setValue("destination", "Punta Cana International Airport (PUJ)");
     }
     const apiFlightDate = flightDateYmdFromVerification(result);
-    if (apiFlightDate && !fd) {
+    if (apiFlightDate && !latestFlightInputRef.current.flightDate) {
       setFlightDate(apiFlightDate);
     }
 
     const pickup = pickupSuggestionFromFlightArrival(result);
-    if (pickup && !pickupTimeWidgetTouchedRef.current) {
+    if (pickup && !pickupTimeWidgetTouchedRef.current && !pickupDateWidgetTouchedRef.current) {
       form.setValue("pickupDate", pickup.pickupDateYmd);
       form.setValue("pickupTime", roundTimeUpToQuarterHour(pickup.pickupTimeHHmm));
     }
@@ -416,7 +419,7 @@ export default function BookingWidget() {
                         >
                           <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-coco-gold" />
                           {flightDate ? (
-                            format(parseISO(flightDate), "EEEE d MMMM yyyy", { locale: es })
+                            formatYmdLongEs(flightDate)
                           ) : (
                             <span>Fecha del vuelo</span>
                           )}
@@ -425,7 +428,7 @@ export default function BookingWidget() {
                       <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                         <CalendarComponent
                           mode="single"
-                          selected={flightDate ? parseISO(flightDate) : undefined}
+                          selected={parseYmdLocal(flightDate) ?? undefined}
                           onSelect={(date) => {
                             if (date) {
                               setFlightDate(format(date, "yyyy-MM-dd"));
@@ -515,7 +518,7 @@ export default function BookingWidget() {
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {field.value ? (
-                                  format(new Date(field.value + "T12:00:00"), "PPP")
+                                  formatYmdShortEs(field.value)
                                 ) : (
                                   <span>Selecciona la fecha</span>
                                 )}
@@ -525,10 +528,11 @@ export default function BookingWidget() {
                           <PopoverContent className="w-auto p-0 bg-void border-white/10" align="start">
                             <CalendarComponent
                               mode="single"
-                              selected={field.value ? new Date(field.value + "T12:00:00") : undefined}
+                              selected={parseYmdLocal(field.value) ?? undefined}
                               onSelect={(date) => {
                                 if (date) {
-                                  field.onChange(date.toISOString().split("T")[0]);
+                                  pickupDateWidgetTouchedRef.current = true;
+                                  field.onChange(format(date, "yyyy-MM-dd"));
                                 }
                               }}
                               disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
