@@ -8,6 +8,119 @@ export function firstValidDate(...candidates: Array<string | null | undefined>):
   return null;
 }
 
+/** Minutos después de la llegada del vuelo para sugerir recogida en aeropuerto → hotel. */
+export const PICKUP_AFTER_ARRIVAL_MINUTES = 15;
+
+function formatLocalYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatLocalHhmm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Redondea hacia arriba al cuarto de hora (selectores 00/15/30/45). */
+export function roundTimeUpToQuarterHour(hhmm: string): string {
+  const parts = hhmm.split(":");
+  const h = Number(parts[0]) || 0;
+  const m = Number(parts[1]) || 0;
+  let total = h * 60 + m;
+  total = Math.ceil(total / 15) * 15;
+  if (total >= 24 * 60) total = 23 * 60 + 45;
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+export type FlightArrivalLeg = {
+  scheduled?: string | null;
+  estimated?: string | null;
+  actual?: string | null;
+};
+
+export function arrivalDateTimeFromVerification(verification: {
+  arrival?: FlightArrivalLeg | null;
+} | null | undefined): Date | null {
+  return firstValidDate(
+    verification?.arrival?.actual,
+    verification?.arrival?.estimated,
+    verification?.arrival?.scheduled,
+  );
+}
+
+/** Fecha del vuelo (YYYY-MM-DD) priorizando la llegada reportada por la API. */
+export function flightDateYmdFromVerification(verification: {
+  raw?: { flightDate?: unknown };
+  arrival?: FlightArrivalLeg | null;
+} | null | undefined): string | null {
+  const iso =
+    verification?.arrival?.actual ||
+    verification?.arrival?.estimated ||
+    verification?.arrival?.scheduled;
+  if (iso) {
+    const match = String(iso).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  const raw = verification?.raw?.flightDate;
+  if (raw) {
+    const s = String(raw).trim();
+    if (s.length >= 10) return s.slice(0, 10);
+  }
+  const arrival = arrivalDateTimeFromVerification(verification);
+  if (arrival) return formatLocalYmd(arrival);
+  return null;
+}
+
+/** Suma minutos a YYYY-MM-DD + HH:mm sin cambiar de día salvo desborde de medianoche. */
+function addMinutesToYmdAndTime(
+  ymd: string,
+  hhmm: string,
+  minutes: number,
+): { pickupDateYmd: string; pickupTimeHHmm: string; pickupAt: Date } {
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const [h, mi] = hhmm.split(":").map(Number);
+  const pickupAt = new Date(y, mo - 1, d, h, mi + minutes, 0, 0);
+  return {
+    pickupDateYmd: formatLocalYmd(pickupAt),
+    pickupTimeHHmm: formatLocalHhmm(pickupAt),
+    pickupAt,
+  };
+}
+
+function pickupFromIsoLiteral(
+  iso: string,
+  minutesAfterArrival: number,
+): { pickupDateYmd: string; pickupTimeHHmm: string; pickupAt: Date } | null {
+  const match = String(iso).trim().match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+  if (!match) return null;
+  return addMinutesToYmdAndTime(match[1], `${match[2]}:${match[3]}`, minutesAfterArrival);
+}
+
+/** Recogida sugerida: fecha/hora de llegada de la API + 15 min (misma fecha que muestra el vuelo). */
+export function pickupSuggestionFromFlightArrival(
+  verification: { arrival?: FlightArrivalLeg | null } | null | undefined,
+  minutesAfterArrival: number = PICKUP_AFTER_ARRIVAL_MINUTES,
+): { pickupDateYmd: string; pickupTimeHHmm: string; pickupAt: Date } | null {
+  const iso =
+    verification?.arrival?.actual ||
+    verification?.arrival?.estimated ||
+    verification?.arrival?.scheduled;
+  if (iso) {
+    const fromLiteral = pickupFromIsoLiteral(iso, minutesAfterArrival);
+    if (fromLiteral) return fromLiteral;
+  }
+
+  const arrival = arrivalDateTimeFromVerification(verification);
+  if (!arrival) return null;
+
+  const pickupAt = new Date(arrival.getTime() + minutesAfterArrival * 60 * 1000);
+  return {
+    pickupDateYmd: formatLocalYmd(pickupAt),
+    pickupTimeHHmm: formatLocalHhmm(pickupAt),
+    pickupAt,
+  };
+}
+
 /**
  * Buffer antes del despegue para recogida hotel → aeropuerto (ida de vuelta).
  * Base 2h 30m + extra por zona (tráfico / distancia típica al aeropuerto).

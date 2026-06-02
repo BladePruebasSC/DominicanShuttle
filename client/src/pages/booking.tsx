@@ -27,8 +27,10 @@ import { PhoneInput } from "@/components/phone-input";
 import { apiRequest } from "@/lib/queryClient";
 import {
   firstValidDate,
+  flightDateYmdFromVerification,
   flightVerifyCacheKey,
   pickupBufferMinutesBeforeDeparture,
+  pickupSuggestionFromFlightArrival,
   readFlightVerifyCache,
   shouldClearFlightVerificationForDateMismatch,
   writeFlightVerifyCache,
@@ -278,14 +280,15 @@ export default function Booking() {
           form.setValue("destination", "Punta Cana International Airport (PUJ)");
         }
 
+        const apiFlightDate = flightDateYmdFromVerification(result);
+        if (apiFlightDate && !vars.flightDate) {
+          setFlightDate(apiFlightDate);
+        }
+
         if (!pickupTimeTouchedRef.current) {
-          const arrival = firstValidDate(
-            result?.arrival?.actual,
-            result?.arrival?.estimated,
-            result?.arrival?.scheduled,
-          );
-          if (arrival) {
-            form.setValue("pickupDate", arrival as any);
+          const pickup = pickupSuggestionFromFlightArrival(result);
+          if (pickup) {
+            form.setValue("pickupDate", pickup.pickupAt.toISOString() as any);
           }
         }
 
@@ -633,7 +636,7 @@ export default function Booking() {
                           <h4 className="text-white text-sm font-semibold uppercase tracking-wider">Vuelo (opcional)</h4>
                         </div>
                         <p className="text-xs text-gray-400 mb-3">
-                          La verificación es automática al completar un código válido (IATA p. ej. WN2496 o ICAO p. ej. SWA2496). La hora de recogida se sugiere según la llegada del vuelo; puedes cambiarla abajo.
+                          La verificación es automática al completar un código válido (IATA p. ej. WN2496 o ICAO p. ej. SWA2496). La fecha de recogida y del vuelo se toman de la API; la hora de recogida se sugiere 15 min después de la llegada (puedes cambiarla abajo).
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <Input

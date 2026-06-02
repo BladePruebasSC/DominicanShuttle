@@ -18,9 +18,11 @@ import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import RouteMap from "@/components/route-map";
 import { apiRequest } from "@/lib/queryClient";
 import {
-  firstValidDate,
+  flightDateYmdFromVerification,
   flightVerifyCacheKey,
+  pickupSuggestionFromFlightArrival,
   readFlightVerifyCache,
+  roundTimeUpToQuarterHour,
   shouldClearFlightVerificationForDateMismatch,
   writeFlightVerifyCache,
 } from "@/lib/flight-helpers";
@@ -205,18 +207,15 @@ export default function BookingWidget() {
     if (result?.departure?.iata === "PUJ" && !form.getValues("destination")) {
       form.setValue("destination", "Punta Cana International Airport (PUJ)");
     }
-    const arrival = firstValidDate(
-      result?.arrival?.actual,
-      result?.arrival?.estimated,
-      result?.arrival?.scheduled,
-    );
-    if (arrival && !pickupTimeWidgetTouchedRef.current) {
-      const ymd = `${arrival.getFullYear()}-${String(arrival.getMonth() + 1).padStart(2, "0")}-${String(arrival.getDate()).padStart(2, "0")}`;
-      form.setValue("pickupDate", ymd);
-      form.setValue(
-        "pickupTime",
-        `${String(arrival.getHours()).padStart(2, "0")}:${String(arrival.getMinutes()).padStart(2, "0")}`,
-      );
+    const apiFlightDate = flightDateYmdFromVerification(result);
+    if (apiFlightDate && !fd) {
+      setFlightDate(apiFlightDate);
+    }
+
+    const pickup = pickupSuggestionFromFlightArrival(result);
+    if (pickup && !pickupTimeWidgetTouchedRef.current) {
+      form.setValue("pickupDate", pickup.pickupDateYmd);
+      form.setValue("pickupTime", roundTimeUpToQuarterHour(pickup.pickupTimeHHmm));
     }
     const toastKey = `${fn}|${fd || ""}`;
     if (lastFlightToastWidgetRef.current !== toastKey) {
@@ -397,7 +396,7 @@ export default function BookingWidget() {
                 <div className="border border-white/10 rounded-lg p-4 bg-void/40">
                   <p className="text-gray-300 text-xs uppercase tracking-wider mb-3">Flight Verification (Optional)</p>
                   <p className="text-gray-500 text-xs mb-2">
-                    Al escribir un número de vuelo válido se verifica solo; la fecha y hora de recogida se sugieren según la llegada (puedes cambiarlas).
+                    Al escribir un número de vuelo válido se verifica solo; la fecha de recogida y la del vuelo se toman de la API y la hora de recogida se sugiere 15 min después de la llegada (puedes cambiarlas).
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Input
