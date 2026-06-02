@@ -20,7 +20,9 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   firstValidDate,
   flightVerifyCacheKey,
+  readFlightVerifyCache,
   shouldClearFlightVerificationForDateMismatch,
+  writeFlightVerifyCache,
 } from "@/lib/flight-helpers";
 
 const bookingFormSchema = z.object({
@@ -149,18 +151,13 @@ export default function BookingWidget() {
         const fd = flightDate || undefined;
         const flightCacheKey = flightVerifyCacheKey("inbound", fn, fd);
 
-        try {
-          const cached = sessionStorage.getItem(flightCacheKey);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            const latest = latestFlightInputRef.current;
-            if (latest.flightNumber !== fn || (latest.flightDate || "") !== (fd || "")) return;
-            setFlightVerification(parsed);
-            applyWidgetFlightResult(parsed, fn, fd);
-            return;
-          }
-        } catch {
-          // continuar con fetch
+        const cached = readFlightVerifyCache(flightCacheKey);
+        if (cached) {
+          const latest = latestFlightInputRef.current;
+          if (latest.flightNumber !== fn || (latest.flightDate || "") !== (fd || "")) return;
+          setFlightVerification(cached);
+          applyWidgetFlightResult(cached, fn, fd);
+          return;
         }
 
         setFlightVerifying(true);
@@ -169,11 +166,7 @@ export default function BookingWidget() {
           if (fd) params.set("flightDate", fd);
           const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
           const result = await res.json();
-          try {
-            sessionStorage.setItem(flightCacheKey, JSON.stringify(result));
-          } catch {
-            // ignore
-          }
+          writeFlightVerifyCache(flightCacheKey, result);
           const latest = latestFlightInputRef.current;
           if (latest.flightNumber !== fn || (latest.flightDate || "") !== (fd || "")) return;
           setFlightVerification(result);

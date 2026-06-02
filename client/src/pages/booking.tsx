@@ -29,7 +29,9 @@ import {
   firstValidDate,
   flightVerifyCacheKey,
   pickupBufferMinutesBeforeDeparture,
+  readFlightVerifyCache,
   shouldClearFlightVerificationForDateMismatch,
+  writeFlightVerifyCache,
 } from "@/lib/flight-helpers";
 
 // Placeholder SVG como data URI (evita ERR_NAME_NOT_RESOLVED de servicios externos)
@@ -228,15 +230,8 @@ export default function Booking() {
     mutationFn: async ({ leg, flightNumber: fn, flightDate: fd }: FlightVerifyVars) => {
       const flightCacheKey = flightVerifyCacheKey(leg, fn, fd);
 
-      try {
-        const cached = sessionStorage.getItem(flightCacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          return parsed;
-        }
-      } catch {
-        // Si sessionStorage está bloqueado o falla, seguimos con la verificación normal.
-      }
+      const cached = readFlightVerifyCache(flightCacheKey);
+      if (cached) return cached;
 
       if (!fn || !/^[A-Z0-9]{2,3}\d{1,4}$/.test(fn)) {
         return {
@@ -256,11 +251,7 @@ export default function Booking() {
       const res = await apiRequest("GET", `/api/flights/verify?${params.toString()}`);
       const result = await res.json();
 
-      try {
-        sessionStorage.setItem(flightCacheKey, JSON.stringify(result));
-      } catch {
-        // No bloqueamos el flujo si sessionStorage falla.
-      }
+      writeFlightVerifyCache(flightCacheKey, result);
 
       return result;
     },

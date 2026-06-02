@@ -763,6 +763,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Actualizar datos estructurados de vuelo (verificación manual o desde admin)
+  app.patch("/api/bookings/:id/flight", async (req, res) => {
+    const schema = z.object({
+      flightNumber: z.string().optional().nullable(),
+      flightDate: z.string().optional().nullable(),
+      flightVerified: z.boolean().optional(),
+      flightStatus: z.string().optional().nullable(),
+      flightAirline: z.string().optional().nullable(),
+      flightDepartureIata: z.string().optional().nullable(),
+      flightArrivalIata: z.string().optional().nullable(),
+      verification: z
+        .object({
+          verified: z.boolean().optional(),
+          flightNumber: z.string().optional(),
+          status: z.string().optional().nullable(),
+          airline: z.object({ name: z.string().optional() }).optional().nullable(),
+          departure: z.object({ iata: z.string().optional() }).optional().nullable(),
+          arrival: z.object({ iata: z.string().optional() }).optional().nullable(),
+          raw: z.object({ flightDate: z.union([z.string(), z.number()]).optional() }).optional().nullable(),
+        })
+        .optional(),
+    });
+
+    try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) {
+        res.status(501).json({ message: "Supabase admin no está configurado en el servidor" });
+        return;
+      }
+
+      const body = schema.parse(req.body);
+      const nowIso = new Date().toISOString();
+      const v = body.verification;
+
+      const normalizedFn = String(
+        v?.flightNumber ?? body.flightNumber ?? "",
+      )
+        .replace(/\s+/g, "")
+        .toUpperCase();
+
+      const rawDate = v?.raw?.flightDate;
+      const flightDate =
+        body.flightDate != null
+          ? String(body.flightDate).slice(0, 10)
+          : rawDate != null
+            ? String(rawDate).slice(0, 10)
+            : null;
+
+      const update: Record<string, unknown> = {
+        updated_at: nowIso,
+      };
+
+      if (normalizedFn) update.flight_number = normalizedFn;
+      if (flightDate) update.flight_date = flightDate;
+      if (v) {
+        update.flight_verified = Boolean(v.verified);
+        update.flight_status = v.status ?? null;
+        update.flight_airline = v.airline?.name ?? null;
+        update.flight_departure_iata = v.departure?.iata ?? null;
+        update.flight_arrival_iata = v.arrival?.iata ?? null;
+      } else {
+        if (body.flightVerified !== undefined) update.flight_verified = body.flightVerified;
+        if (body.flightStatus !== undefined) update.flight_status = body.flightStatus;
+        if (body.flightAirline !== undefined) update.flight_airline = body.flightAirline;
+        if (body.flightDepartureIata !== undefined) update.flight_departure_iata = body.flightDepartureIata;
+        if (body.flightArrivalIata !== undefined) update.flight_arrival_iata = body.flightArrivalIata;
+      }
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .update(update)
+        .eq("id", req.params.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        res.status(500).json({ message: "Failed to update booking flight", error: error.message });
+        return;
+      }
+
+      res.json(mapBookingRow(data));
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid flight payload", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update booking flight" });
+      }
+    }
+  });
+
   // Asignar vehículo/chofer/placa a una reserva y disparar automatización
   app.patch("/api/bookings/:id/assignment", async (req, res) => {
     const schema = z.object({

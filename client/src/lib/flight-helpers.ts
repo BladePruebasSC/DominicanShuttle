@@ -33,6 +33,89 @@ export function flightVerifyCacheKey(leg: "inbound" | "outbound", flightNumber: 
   return `flightVerify:${leg}:${flightNumber}|${flightDate || ""}`;
 }
 
+/** Solo cacheamos verificaciones exitosas para no “atascar” errores transitorios del proveedor. */
+export function readFlightVerifyCache(key: string): Record<string, unknown> | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed?.verified) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function writeFlightVerifyCache(key: string, result: Record<string, unknown> | null | undefined) {
+  try {
+    if (result?.verified) {
+      sessionStorage.setItem(key, JSON.stringify(result));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export type FlightBookingFields = {
+  flightNumber: string | null;
+  flightDate: string | null;
+  flightVerified: boolean;
+  flightStatus: string | null;
+  flightAirline: string | null;
+  flightDepartureIata: string | null;
+  flightArrivalIata: string | null;
+};
+
+export function flightFieldsFromVerification(
+  verification: {
+    verified?: boolean;
+    flightNumber?: string;
+    status?: string | null;
+    airline?: { name?: string } | null;
+    departure?: { iata?: string } | null;
+    arrival?: { iata?: string } | null;
+    raw?: { flightDate?: unknown };
+  } | null | undefined,
+  fallbackFlightNumber?: string,
+  fallbackFlightDate?: string,
+): FlightBookingFields {
+  const fn = String(verification?.flightNumber || fallbackFlightNumber || "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+  const rawDate = verification?.raw?.flightDate;
+  const flightDate =
+    (fallbackFlightDate ? String(fallbackFlightDate).slice(0, 10) : null) ||
+    (rawDate ? String(rawDate).slice(0, 10) : null);
+
+  return {
+    flightNumber: fn || null,
+    flightDate,
+    flightVerified: Boolean(verification?.verified),
+    flightStatus: verification?.status ?? null,
+    flightAirline: verification?.airline?.name ?? null,
+    flightDepartureIata: verification?.departure?.iata ?? null,
+    flightArrivalIata: verification?.arrival?.iata ?? null,
+  };
+}
+
+/** Reservas antiguas que solo guardaron el vuelo en specialRequests. */
+export function parseFlightHintFromText(text?: string | null): string | null {
+  if (!text) return null;
+  const m = text.match(
+    /\[(?:Flight Verified|Flight Provided|FlightRecheck|Outbound Flight Verified|Outbound Flight Provided)\]\s*([A-Z]{2,3}\d{1,4})/i,
+  );
+  return m?.[1]?.toUpperCase() ?? null;
+}
+
+export function resolveBookingFlightNumber(booking: {
+  flightNumber?: string | null;
+  specialRequests?: string | null;
+}): string | null {
+  const direct = String(booking.flightNumber || "").trim();
+  if (direct) return direct;
+  return parseFlightHintFromText(booking.specialRequests);
+}
+
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function pushIsoYmd(out: string[], iso: string | null | undefined) {
